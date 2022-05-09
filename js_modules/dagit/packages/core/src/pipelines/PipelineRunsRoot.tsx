@@ -17,6 +17,7 @@ import {
   useQueryRefreshAtInterval,
 } from '../app/QueryRefresh';
 import {RunTable, RUN_TABLE_RUN_FRAGMENT} from '../runs/RunTable';
+import {DagsterTag} from '../runs/RunTag';
 import {RunsQueryRefetchContext} from '../runs/RunUtils';
 import {
   RunFilterTokenType,
@@ -60,7 +61,11 @@ export const PipelineRunsRoot: React.FC<Props> = (props) => {
     ].filter(Boolean) as TokenizingFieldValue[];
   }, [isJob, pipelineName, snapshotId]);
 
-  const allTokens = [...filterTokens, ...permanentTokens];
+  const repoToken = {
+    token: 'tag',
+    value: `${DagsterTag.RepositoryLabelTag}=${repoAddress?.name}@${repoAddress?.location}`,
+  };
+  const allTokens = [...filterTokens, ...permanentTokens, repoToken];
 
   const {queryResult, paginationProps} = useCursorPaginatedQuery<
     PipelineRunsRootQuery,

@@ -17,8 +17,8 @@ from dagster.core.scheduler.instigation import (
     SensorInstigatorData,
     TickStatus,
 )
-from dagster.core.storage.pipeline_run import RunsFilter
-from dagster.core.storage.tags import TagType, get_tag_type
+from dagster.core.storage.pipeline_run import PipelineRun, RunsFilter
+from dagster.core.storage.tags import REPOSITORY_LABEL_TAG, TagType, get_tag_type
 from dagster.seven.compat.pendulum import to_timezone
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 
@@ -351,10 +351,21 @@ class GrapheneInstigationState(graphene.ObjectType):
             )
             return [GrapheneRun(record) for record in records]
 
+        repository_label = self._instigator_state.origin.external_repository_origin.get_label()
         if self._instigator_state.instigator_type == InstigatorType.SENSOR:
-            filters = RunsFilter.for_sensor(self._instigator_state)
+            filters = RunsFilter(
+                tags={
+                    **PipelineRun.tags_for_sensor(self._instigator_state),
+                    REPOSITORY_LABEL_TAG: repository_label,
+                }
+            )
         else:
-            filters = RunsFilter.for_schedule(self._instigator_state)
+            filters = RunsFilter(
+                tags={
+                    **PipelineRun.tags_for_schedule(self._instigator_state),
+                    REPOSITORY_LABEL_TAG: repository_label,
+                }
+            )
         return [
             GrapheneRun(record)
             for record in graphene_info.context.instance.get_run_records(
