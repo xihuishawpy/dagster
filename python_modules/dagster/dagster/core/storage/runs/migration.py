@@ -145,8 +145,6 @@ def add_run_stats(run_storage: RunStorage, run_id: str) -> None:
 def migrate_run_repo_tags(run_storage: RunStorage, print_fn=None):
     from dagster.core.storage.runs.sql_run_storage import SqlRunStorage
 
-    from .schema import RunTagsTable, RunsTable
-
     if not isinstance(run_storage, SqlRunStorage):
         return
 
