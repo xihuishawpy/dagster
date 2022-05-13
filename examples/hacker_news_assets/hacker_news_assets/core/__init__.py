@@ -1,8 +1,8 @@
-from dagster import AssetGroup, schedule_from_partitions
+from dagster import assets_from_package_module, build_assets_job, schedule_from_partitions
 
 from . import assets
 
-core_assets = AssetGroup.from_package_module(package_module=assets).prefixed("core")
+core_assets = assets_from_package_module(package_module=assets, prefix="core")
 
 RUN_TAGS = {
     "dagster-k8s/config": {
@@ -15,7 +15,7 @@ RUN_TAGS = {
 }
 
 core_assets_schedule = schedule_from_partitions(
-    core_assets.build_job(name="core_job", tags=RUN_TAGS)
+    build_assets_job(core_assets, name="core_job", tags=RUN_TAGS)
 )
 
 

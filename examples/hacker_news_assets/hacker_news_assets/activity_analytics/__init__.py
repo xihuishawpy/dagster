@@ -4,7 +4,7 @@ import os
 from dagster_dbt.asset_defs import load_assets_from_dbt_manifest
 from hacker_news_assets.sensors.hn_tables_updated_sensor import make_hn_tables_updated_sensor
 
-from dagster import AssetGroup
+from dagster import assets_from_package_module
 from dagster.utils import file_relative_path
 
 from . import assets
@@ -17,9 +17,9 @@ dbt_assets = load_assets_from_dbt_manifest(
     io_manager_key="warehouse_io_manager",
 )
 
-activity_analytics_assets = AssetGroup.from_package_module(package_module=assets).prefixed(
-    "activity_analytics"
-) + AssetGroup(dbt_assets)
+activity_analytics_assets = (
+    assets_from_package_module(package_module=assets, prefix="activity_analytics") + dbt_assets
+)
 
 
 activity_analytics_assets_sensor = make_hn_tables_updated_sensor(
