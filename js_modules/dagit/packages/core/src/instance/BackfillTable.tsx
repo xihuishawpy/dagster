@@ -24,6 +24,7 @@ import {usePermissions} from '../app/Permissions';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {PartitionStatus} from '../partitions/PartitionStatus';
 import {PipelineReference} from '../pipelines/PipelineReference';
+import {inProgressStatuses} from '../runs/RunStatuses';
 import {runsPathWithFilters} from '../runs/RunsFilterInput';
 import {TerminationDialog} from '../runs/TerminationDialog';
 import {TimestampDisplay} from '../schedules/TimestampDisplay';
@@ -42,7 +43,6 @@ import {
   BackfillTableFragment_partitionSet,
 } from './types/BackfillTableFragment';
 import {resumeBackfill, resumeBackfillVariables} from './types/resumeBackfill';
-import {inProgressStatuses} from '../runs/RunStatuses';
 
 export const BackfillTable = ({
   showPartitionSet = true,

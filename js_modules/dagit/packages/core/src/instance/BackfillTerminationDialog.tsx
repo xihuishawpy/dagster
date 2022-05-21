@@ -6,8 +6,8 @@ import {PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {TerminationDialog} from '../runs/TerminationDialog';
 import {BulkActionStatus} from '../types/globalTypes';
 
-import {CancelBackfill, CancelBackfillVariables} from './types/CancelBackfill';
 import {BackfillTableFragment} from './types/BackfillTableFragment';
+import {CancelBackfill, CancelBackfillVariables} from './types/CancelBackfill';
 
 interface Props {
   backfill?: BackfillTableFragment;

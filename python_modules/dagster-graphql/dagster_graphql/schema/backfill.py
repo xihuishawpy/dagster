@@ -1,10 +1,9 @@
 # pylint: disable=missing-graphene-docstring
 import graphene
-from dagster_graphql.implementation.fetch_partition_sets import get_partition_set_partition_statuses
 
 import dagster._check as check
 from dagster.core.execution.backfill import BulkActionStatus, PartitionBackfill
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, RunsFilter
+from dagster.core.storage.pipeline_run import PipelineRunStatus, RunsFilter
 from dagster.core.storage.tags import PARTITION_NAME_TAG
 
 from .errors import (
@@ -287,6 +286,7 @@ class GraphenePartitionBackfill(graphene.ObjectType):
 
     def resolve_partitionStatuses(self, graphene_info):
         from ..schema.partition_sets import GraphenePartitionStatus, GraphenePartitionStatuses
+
         records = self._get_records(graphene_info)
 
         by_partition_records = {}
@@ -304,12 +304,13 @@ class GraphenePartitionBackfill(graphene.ObjectType):
                     partitionName=partition,
                     runId=record.pipeline_run.run_id,
                     runStatus=record.pipeline_run.status,
-                    runDuration=record.end_time - record.start_time if record.end_time and record.start_time else None,
+                    runDuration=record.end_time - record.start_time
+                    if record.end_time and record.start_time
+                    else None,
                 )
                 for partition, record in by_partition_records.items()
             ]
         )
-
 
     def resolve_error(self, _):
         if self._backfill_job.error:
