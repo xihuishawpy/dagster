@@ -7,12 +7,10 @@ import {TerminationDialog} from '../runs/TerminationDialog';
 import {BulkActionStatus} from '../types/globalTypes';
 
 import {CancelBackfill, CancelBackfillVariables} from './types/CancelBackfill';
-import {InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results} from './types/InstanceBackfillsQuery';
-
-type Backfill = InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results;
+import {BackfillTableFragment} from './types/BackfillTableFragment';
 
 interface Props {
-  backfill?: Backfill;
+  backfill?: BackfillTableFragment;
   onClose: () => void;
   onComplete: () => void;
 }

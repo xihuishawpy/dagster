@@ -178,14 +178,17 @@ def get_partition_set_partition_statuses(
 
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
+    check.str_param(job_name, "job_name")
+    repository_label = repository_handle.get_external_origin().get_label()
     run_partition_data = graphene_info.context.instance.run_storage.get_run_partition_data(
-        partition_set_name, job_name, repository_handle.get_external_origin().get_id()
+        partition_set_name, job_name, repository_label
     )
     return GraphenePartitionStatuses(
         results=[
             GraphenePartitionStatus(
                 id=f"{partition_set_name}:{p.partition}",
                 partitionName=p.partition,
+                runId=p.run_id,
                 runStatus=p.status,
                 runDuration=p.end_time - p.start_time if p.end_time and p.start_time else None,
             )

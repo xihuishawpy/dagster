@@ -1,9 +1,10 @@
 # pylint: disable=missing-graphene-docstring
 import graphene
+from dagster_graphql.implementation.fetch_partition_sets import get_partition_set_partition_statuses
 
 import dagster._check as check
 from dagster.core.execution.backfill import BulkActionStatus, PartitionBackfill
-from dagster.core.storage.pipeline_run import PipelineRunStatus, RunsFilter
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, RunsFilter
 from dagster.core.storage.tags import PARTITION_NAME_TAG
 
 from .errors import (
@@ -132,6 +133,9 @@ class GraphenePartitionBackfill(graphene.ObjectType):
     )
     error = graphene.Field(GraphenePythonError)
     partitionRunStats = graphene.NonNull(GrapheneBackfillRunStats)
+    partitionStatuses = graphene.NonNull(
+        "dagster_graphql.schema.partition_sets.GraphenePartitionStatuses"
+    )
 
     def __init__(self, backfill_job):
         self._backfill_job = check.opt_inst_param(backfill_job, "backfill_job", PartitionBackfill)
@@ -272,10 +276,40 @@ class GraphenePartitionBackfill(graphene.ObjectType):
             return None
 
         partition_set = external_partition_sets[0]
+
+        if not partition_set:
+            return None
+
         return GraphenePartitionSet(
-            external_repository_handle=repository.handle,
+            external_repository_handle=partition_set.repository_handle,
             external_partition_set=partition_set,
         )
+
+    def resolve_partitionStatuses(self, graphene_info):
+        from ..schema.partition_sets import GraphenePartitionStatus, GraphenePartitionStatuses
+        records = self._get_records(graphene_info)
+
+        by_partition_records = {}
+
+        for record in records:
+            partition = record.pipeline_run.tags.get(PARTITION_NAME_TAG)
+            if partition and partition not in by_partition_records:  # get latest for each partition
+                by_partition_records[partition] = record
+
+        partition_set_name = self._backfill_job.partition_set_origin.partition_set_name
+        return GraphenePartitionStatuses(
+            results=[
+                GraphenePartitionStatus(
+                    id=f"{partition_set_name}:{partition}",
+                    partitionName=partition,
+                    runId=record.pipeline_run.run_id,
+                    runStatus=record.pipeline_run.status,
+                    runDuration=record.end_time - record.start_time if record.end_time and record.start_time else None,
+                )
+                for partition, record in by_partition_records.items()
+            ]
+        )
+
 
     def resolve_error(self, _):
         if self._backfill_job.error:

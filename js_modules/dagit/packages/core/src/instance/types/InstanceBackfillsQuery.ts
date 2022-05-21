@@ -3,7 +3,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { BulkActionStatus, BackfillStatus } from "./../../types/globalTypes";
+import { BulkActionStatus, BackfillStatus, RunStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: InstanceBackfillsQuery
@@ -41,6 +41,19 @@ export interface InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackf
   repositoryOrigin: InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionSet_repositoryOrigin;
 }
 
+export interface InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionStatuses_results {
+  __typename: "PartitionStatus";
+  id: string;
+  partitionName: string;
+  runId: string | null;
+  runStatus: RunStatus | null;
+}
+
+export interface InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionStatuses {
+  __typename: "PartitionStatuses";
+  results: InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionStatuses_results[];
+}
+
 export interface InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_error_cause {
   __typename: "PythonError";
   message: string;
@@ -66,6 +79,8 @@ export interface InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackf
   timestamp: number;
   partitionSetName: string;
   partitionSet: InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionSet | null;
+  partitionNames: string[];
+  partitionStatuses: InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_partitionStatuses;
   error: InstanceBackfillsQuery_partitionBackfillsOrError_PartitionBackfills_results_error | null;
 }
 
