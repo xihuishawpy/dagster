@@ -5,8 +5,13 @@ from dagster import AssetIn, asset
 
 @asset(
     ins={
-        "stories": AssetIn(namespace="core", metadata={"columns": ["id"]}),
-        "comments": AssetIn(namespace="core", metadata={"columns": ["id", "user_id", "parent"]}),
+        "stories": AssetIn(
+            asset_key=["snowflake", "core", "stories"], metadata={"columns": ["id"]}
+        ),
+        "comments": AssetIn(
+            asset_key=["snowflake", "core", "comments"],
+            metadata={"columns": ["id", "user_id", "parent"]},
+        ),
     },
     io_manager_key="warehouse_io_manager",
 )
