@@ -66,6 +66,17 @@ def wait_for_job(
     )
 
 
+def check_job_status(
+    job_name,
+    namespace,
+    wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
+    num_pods_to_wait_for=DEFAULT_JOB_POD_COUNT,
+):
+    DagsterKubernetesClient.production_client().check_job_status(
+        job_name, namespace, wait_time_between_attempts, num_pods_to_wait_for
+    )
+
+
 def wait_for_pod(
     pod_name,
     namespace,

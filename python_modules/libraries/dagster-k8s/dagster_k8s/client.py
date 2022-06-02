@@ -176,7 +176,7 @@ class DagsterKubernetesClient:
         start = start_time or self.timer()
 
         while not job:
-            if self.timer() - start > wait_timeout:
+            if wait_timeout and (self.timer() - start > wait_timeout):
                 raise DagsterK8sTimeoutError(
                     "Timed out while waiting for job {job_name}"
                     " to launch".format(job_name=job_name)
@@ -205,6 +205,38 @@ class DagsterKubernetesClient:
             if not job:
                 self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
                 self.sleeper(wait_time_between_attempts)
+
+    def check_job_status(
+        self,
+        job_name,
+        namespace,
+        wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
+        num_pods_to_wait_for=DEFAULT_JOB_POD_COUNT,
+    ):
+        """Raise an exception if the job failed, return if it succeeded"""
+
+        # Reads the status of the specified job. Returns a V1Job object that
+        # we need to read the status off of.
+        status = None
+
+        def _get_job_status():
+            job = self.batch_api.read_namespaced_job_status(job_name, namespace=namespace)
+            return job.status
+
+        status = k8s_api_retry(_get_job_status, max_retries=3, timeout=wait_time_between_attempts)
+
+        # status.succeeded represents the number of pods which reached phase Succeeded.
+        if status.succeeded == num_pods_to_wait_for:
+            return
+
+        # status.failed represents the number of pods which reached phase Failed.
+        if status.failed and status.failed > 0:
+            raise DagsterK8sError(
+                "Encountered failed job pods for job {job_name} with status: {status}, "
+                "in namespace {namespace}".format(
+                    job_name=job_name, status=status, namespace=namespace
+                )
+            )
 
     def wait_for_job_success(
         self,
@@ -257,30 +289,12 @@ class DagsterKubernetesClient:
                     " to complete".format(job_name=job_name)
                 )
 
-            # Reads the status of the specified job. Returns a V1Job object that
-            # we need to read the status off of.
-            status = None
-
-            def _get_job_status():
-                job = self.batch_api.read_namespaced_job_status(job_name, namespace=namespace)
-                return job.status
-
-            status = k8s_api_retry(
-                _get_job_status, max_retries=3, timeout=wait_time_between_attempts
+            self.check_job_status(
+                job_name,
+                namespace,
+                wait_time_between_attempts,
+                num_pods_to_wait_for,
             )
-
-            # status.succeeded represents the number of pods which reached phase Succeeded.
-            if status.succeeded == num_pods_to_wait_for:
-                break
-
-            # status.failed represents the number of pods which reached phase Failed.
-            if status.failed and status.failed > 0:
-                raise DagsterK8sError(
-                    "Encountered failed job pods for job {job_name} with status: {status}, "
-                    "in namespace {namespace}".format(
-                        job_name=job_name, status=status, namespace=namespace
-                    )
-                )
 
             if instance and run_id:
                 pipeline_run = instance.get_run_by_id(run_id)
@@ -417,7 +431,7 @@ class DagsterKubernetesClient:
             ).items
             pod = pods[0] if pods else None
 
-            if self.timer() - start > wait_timeout:
+            if wait_timeout and self.timer() - start > wait_timeout:
                 raise DagsterK8sError(
                     "Timed out while waiting for pod to become ready with pod info: %s" % str(pod)
                 )
