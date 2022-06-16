@@ -14,7 +14,13 @@ from dagster import (
 )
 from dagster import _check as check
 from dagster import build_op_context
-from dagster.core.asset_defs import AssetIn, AssetsDefinition, asset, build_assets_job, multi_asset
+from dagster.core.definitions.assets import (
+    AssetIn,
+    AssetsDefinition,
+    asset,
+    build_assets_job,
+    multi_asset,
+)
 
 
 @pytest.fixture(autouse=True)

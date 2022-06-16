@@ -13,7 +13,7 @@ from dagster import (
     op,
 )
 from dagster._check import CheckError
-from dagster.core.asset_defs import AssetGroup, AssetIn, SourceAsset, asset, multi_asset
+from dagster.core.definitions.assets import AssetGroup, AssetIn, SourceAsset, asset, multi_asset
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvalidInvocationError
 from dagster.core.storage.mem_io_manager import InMemoryIOManager
 

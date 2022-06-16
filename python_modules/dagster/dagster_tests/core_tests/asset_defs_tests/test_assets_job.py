@@ -27,7 +27,7 @@ from dagster import (
     resource,
 )
 from dagster.config.source import StringSource
-from dagster.core.asset_defs import AssetIn, SourceAsset, asset, build_assets_job
+from dagster.core.definitions.assets import AssetIn, SourceAsset, asset, build_assets_job
 from dagster.core.definitions.dependency import NodeHandle
 from dagster.core.errors import DagsterInvalidSubsetError
 from dagster.core.snap import DependencyStructureIndex
