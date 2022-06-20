@@ -14,7 +14,7 @@ from dagster import (
 )
 from dagster import _check as check
 from dagster import build_op_context
-from dagster.core.definitions.assets import (
+from dagster.core.definitions import (
     AssetIn,
     AssetsDefinition,
     asset,

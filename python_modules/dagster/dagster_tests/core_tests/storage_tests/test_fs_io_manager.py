@@ -18,7 +18,7 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.core.definitions.assets import (
+from dagster.core.definitions import (
     AssetGroup,
     AssetIn,
     asset,

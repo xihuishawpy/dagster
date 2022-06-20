@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
 
 import dagster._check as check
-from dagster.core.definitions.assets import AssetsDefinition
-from dagster.core.definitions.assets_job import build_assets_job
+from dagster.core.definitions import AssetsDefinition
+from dagster.core.definitions_job import build_assets_job
 from dagster.core.definitions.source_asset import SourceAsset
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.fs_io_manager import fs_io_manager

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
         PartitionedConfig,
         PartitionsDefinition,
     )
-    from dagster.core.definitions.assets import AssetSelection, AssetsDefinition, SourceAsset
+    from dagster.core.definitions import AssetSelection, AssetsDefinition, SourceAsset
 
 
 class UnresolvedAssetJobDefinition(
@@ -40,7 +40,7 @@ class UnresolvedAssetJobDefinition(
         partitions_def: Optional["PartitionsDefinition"] = None,
     ):
         from dagster.core.definitions import PartitionsDefinition
-        from dagster.core.definitions.assets import AssetSelection
+        from dagster.core.definitions import AssetSelection
 
         return super(UnresolvedAssetJobDefinition, cls).__new__(
             cls,
@@ -85,7 +85,7 @@ class UnresolvedAssetJobDefinition(
 
 
 def _selection_from_string(string: str) -> "AssetSelection":
-    from dagster.core.definitions.assets import AssetSelection
+    from dagster.core.definitions import AssetSelection
 
     if string == "*":
         return AssetSelection.all()
@@ -149,7 +149,7 @@ def define_asset_job(
             Defines the set of partitions for this job. All AssetDefinitions selected for this job
             must have a matching PartitionsDefinition.
     """
-    from dagster.core.definitions.assets import AssetSelection
+    from dagster.core.definitions import AssetSelection
 
     selection = check.opt_inst_param(
         selection, "selection", (str, list, AssetSelection), default=AssetSelection.all()
