@@ -2,6 +2,7 @@ import hashlib
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
+    AbstractSet,
     Any,
     Dict,
     Iterator,
@@ -92,7 +93,7 @@ class StepInput(
         return self.source.step_output_handle_dependencies
 
 
-def join_and_hash(*args) -> Optional[str]:
+def join_and_hash(*args: Optional[str]) -> Optional[str]:
     lst = [check.opt_str_param(elem, "elem") for elem in args]
     if None in lst:
         return None
@@ -115,9 +116,9 @@ class StepInputSource(ABC):
 
     @abstractmethod
     def load_input_object(self, step_context: "StepExecutionContext", input_def: InputDefinition):
-        raise NotImplementedError()
+        ...
 
-    def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
+    def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> AbstractSet[str]:
         return set()
 
     def get_asset_lineage(
@@ -284,6 +285,9 @@ class FromRootInputManager(
     ) -> Iterator["DagsterEvent"]:
         from dagster.core.events import DagsterEvent
 
+        root_manager_key = check.not_none(
+            input_def.root_manager_key, "root_manager_key must be defined"
+        )
         check.invariant(
             step_context.solid_handle == self.solid_handle and input_def.name == self.input_name,
             "RootInputManager source must be op input and not one along compostion mapping. "
@@ -296,16 +300,14 @@ class FromRootInputManager(
         solid_config = step_context.resolved_run_config.solids.get(str(self.solid_handle))
         config_data = solid_config.inputs.get(self.input_name) if solid_config else None
 
-        loader = getattr(step_context.resources, input_def.root_manager_key)
+        loader = getattr(step_context.resources, root_manager_key)
         load_input_context = step_context.for_input_manager(
             input_def.name,
             config_data,
             metadata=input_def.metadata,
             dagster_type=input_def.dagster_type,
-            resource_config=step_context.resolved_run_config.resources[
-                input_def.root_manager_key
-            ].config,
-            resources=build_resources_for_manager(input_def.root_manager_key, step_context),
+            resource_config=step_context.resolved_run_config.resources[root_manager_key].config,
+            resources=build_resources_for_manager(root_manager_key, step_context),
         )
 
         yield from _load_input_with_input_manager(loader, load_input_context)
@@ -315,24 +317,32 @@ class FromRootInputManager(
         yield DagsterEvent.loaded_input(
             step_context,
             input_name=input_def.name,
-            manager_key=input_def.root_manager_key,
+            manager_key=root_manager_key,
             metadata_entries=[
                 entry for entry in metadata_entries if isinstance(entry, MetadataEntry)
             ],
         )
 
-    def compute_version(self, step_versions, pipeline_def, resolved_run_config) -> Optional[str]:
+    def compute_version(
+        self,
+        step_versions: Dict[str, Optional[str]],
+        pipeline_def: PipelineDefinition,
+        resolved_run_config: ResolvedRunConfig,
+    ) -> Optional[str]:
         from ..resolve_versions import check_valid_version, resolve_config_version
 
         solid = pipeline_def.get_solid(self.solid_handle)
-        root_manager_key = solid.input_def_named(self.input_name).root_manager_key
+        root_manager_key: str = check.not_none(
+            solid.input_def_named(self.input_name).root_manager_key,
+            "root_manager_key must be defined",
+        )
         root_manager_def = pipeline_def.get_mode_definition(resolved_run_config.mode).resource_defs[
             root_manager_key
         ]
 
-        solid_config = resolved_run_config.solids.get(solid.name)
+        solid_config = resolved_run_config.solids[solid.name]
         input_config = solid_config.inputs.get(self.input_name)
-        resource_config = resolved_run_config.resources.get(root_manager_key).config
+        resource_config = resolved_run_config.resources[root_manager_key].config
 
         version_context = ResourceVersionContext(
             resource_def=root_manager_def,
@@ -362,8 +372,10 @@ class FromRootInputManager(
 
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
         input_def = pipeline_def.get_solid(self.solid_handle).input_def_named(self.input_name)
-
-        return {input_def.root_manager_key}
+        root_manager_key: str = check.not_none(
+            input_def.root_manager_key, "root_manager_key must be defined"
+        )
+        return {root_manager_key}
 
 
 @whitelist_for_serdes
@@ -595,16 +607,12 @@ class FromConfig(
         ):
             dagster_type = self.get_associated_input_def(step_context.pipeline_def).dagster_type
             config_data = self.get_associated_config(step_context.resolved_run_config)
+            loader = check.not_none(dagster_type.loader)
+            return loader.construct_from_config_value(step_context, config_data)
 
-            return dagster_type.loader.construct_from_config_value(step_context, config_data)
-
-    def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
-        input_def = self.get_associated_input_def(pipeline_def)
-        return (
-            input_def.dagster_type.loader.required_resource_keys()
-            if input_def.dagster_type.loader
-            else set()
-        )
+    def required_resource_keys(self, pipeline_def: PipelineDefinition) -> AbstractSet[str]:
+        dagster_type = self.get_associated_input_def(pipeline_def).dagster_type
+        return dagster_type.loader.required_resource_keys() if dagster_type.loader else set()
 
     def compute_version(
         self,
@@ -616,8 +624,9 @@ class FromConfig(
         config_data = self.get_associated_config(resolved_run_config)
         input_def = self.get_associated_input_def(pipeline_def)
         dagster_type = input_def.dagster_type
+        loader = check.not_none(dagster_type.loader)
 
-        return dagster_type.loader.compute_loaded_input_version(config_data)
+        return loader.compute_loaded_input_version(config_data)
 
 
 @whitelist_for_serdes

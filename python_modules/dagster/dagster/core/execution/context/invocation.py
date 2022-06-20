@@ -357,7 +357,6 @@ class BoundSolidExecutionContext(OpExecutionContext):
     _output_metadata: Dict[str, Any]
     _mapping_key: Optional[str]
 
-
     def __init__(
         self,
         solid_def: SolidDefinition,

@@ -5,7 +5,7 @@ from functools import partial
 from typing import AbstractSet as TypingAbstractSet
 from typing import Iterator as TypingIterator
 from typing import Optional as TypingOptional
-from typing import cast
+from typing import Sequence, cast
 
 import dagster._check as check
 from dagster.builtins import BuiltinEnum
@@ -13,6 +13,7 @@ from dagster.config.config_type import Array, ConfigType
 from dagster.config.config_type import Noneable as ConfigNoneable
 from dagster.core.definitions.events import DynamicOutput, Output, TypeCheck
 from dagster.core.definitions.metadata import MetadataEntry, RawMetadataValue, normalize_metadata
+from dagster.core.definitions.node_definition import NodeDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.serdes import whitelist_for_serdes
 from dagster.seven import is_subclass
@@ -836,12 +837,12 @@ def resolve_dagster_type(dagster_type: object) -> DagsterType:
     from .transform_typing import transform_typing_type
 
     check.invariant(
-        not is_subclass(dagster_type, ConfigType),
+        not (isinstance(dagster_type, type) and is_subclass(dagster_type, ConfigType)),
         "Cannot resolve a config type to a runtime type",
     )
 
     check.invariant(
-        not is_subclass(dagster_type, DagsterType),
+        not (isinstance(dagster_type, type) and is_subclass(dagster_type, DagsterType)),
         "Do not pass runtime type classes. Got {}".format(dagster_type),
     )
 
@@ -908,12 +909,12 @@ def is_dynamic_output_annotation(dagster_type: object) -> bool:
     from dagster.seven.typing import get_args, get_origin
 
     check.invariant(
-        not is_subclass(dagster_type, ConfigType),
+        not (isinstance(dagster_type, type) and is_subclass(dagster_type, ConfigType)),
         "Cannot resolve a config type to a runtime type",
     )
 
     check.invariant(
-        not is_subclass(dagster_type, DagsterType),
+        not (isinstance(dagster_type, type) and is_subclass(dagster_type, ConfigType)),
         "Do not pass runtime type classes. Got {}".format(dagster_type),
     )
 
@@ -951,11 +952,11 @@ def resolve_python_type_to_dagster_type(python_type: t.Type) -> DagsterType:
 ALL_RUNTIME_BUILTINS = list(_RUNTIME_MAP.values())
 
 
-def construct_dagster_type_dictionary(solid_defs):
+def construct_dagster_type_dictionary(node_defs: Sequence[NodeDefinition]):
     type_dict_by_name = {t.unique_name: t for t in ALL_RUNTIME_BUILTINS}
     type_dict_by_key = {t.key: t for t in ALL_RUNTIME_BUILTINS}
-    for solid_def in solid_defs:
-        for dagster_type in solid_def.all_dagster_types():
+    for node_def in node_defs:
+        for dagster_type in node_def.all_dagster_types():
             # We don't do uniqueness check on key because with classes
             # like Array, Noneable, etc, those are ephemeral objects
             # and it is perfectly fine to have many of them.
