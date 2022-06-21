@@ -1,11 +1,13 @@
 from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Union
 
 import dagster._check as check
-from dagster.core.definitions import AssetsDefinition
-from dagster.core.definitions_job import build_assets_job
-from dagster.core.definitions.source_asset import SourceAsset
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.fs_io_manager import fs_io_manager
+
+from .assets import AssetsDefinition
+from .assets_job import build_assets_job
+from .source_asset import SourceAsset
+
 
 if TYPE_CHECKING:
     from dagster.core.execution.execute_in_process_result import ExecuteInProcessResult

@@ -5,15 +5,6 @@ from typing import Any, Callable, List, NamedTuple, Optional, Union, cast
 import pendulum
 
 import dagster._check as check
-from dagster.core.definitions import GraphDefinition, PipelineDefinition
-from dagster.core.definitions.sensor_definition import (
-    DefaultSensorStatus,
-    PipelineRunReaction,
-    SensorDefinition,
-    SensorEvaluationContext,
-    SkipReason,
-    is_context_provided,
-)
 from dagster.core.errors import (
     DagsterInvalidInvocationError,
     RunStatusSensorExecutionError,
@@ -34,6 +25,16 @@ from dagster.utils import utc_datetime_from_timestamp
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 from ..decorator_utils import get_function_params
+from .graph_definition import GraphDefinition
+from .pipeline_definition import PipelineDefinition
+from .sensor_definition import (
+    DefaultSensorStatus,
+    PipelineRunReaction,
+    SensorDefinition,
+    SensorEvaluationContext,
+    SkipReason,
+    is_context_provided,
+)
 
 
 @whitelist_for_serdes

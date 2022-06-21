@@ -4,14 +4,15 @@ from functools import reduce
 from typing import AbstractSet, FrozenSet, Optional, Sequence
 
 import dagster._check as check
-from dagster.core.definitions import AssetsDefinition
-from dagster.core.definitions.events import AssetKey, CoercibleToAssetKey
 from dagster.core.errors import DagsterInvalidSubsetError
 from dagster.core.selector.subset_selector import (
     fetch_connected,
     generate_asset_dep_graph,
     generate_asset_name_to_definition_map,
 )
+
+from .assets import AssetsDefinition
+from .events import AssetKey, CoercibleToAssetKey
 
 
 class AssetSelection(ABC):
