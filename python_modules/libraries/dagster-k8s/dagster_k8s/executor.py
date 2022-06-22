@@ -6,6 +6,7 @@ from dagster_k8s.launcher import K8sRunLauncher
 from dagster import Field, IntSource, StringSource
 from dagster import _check as check
 from dagster import executor
+from dagster.cli.api import KNOWN_STATE_ENV_VAR
 from dagster.core.definitions.executor_definition import multiple_process_executor_requirements
 from dagster.core.errors import DagsterUnmetExecutorRequirementsError
 from dagster.core.events import DagsterEvent, EngineEventData, MetadataEntry
@@ -18,6 +19,7 @@ from dagster.core.executor.step_delegating import (
     StepHandler,
     StepHandlerContext,
 )
+from dagster.serdes.serdes import serialize_dagster_namedtuple
 from dagster.utils import frozentags, merge_dicts
 
 from .container_context import K8sContainerContext
@@ -186,13 +188,20 @@ class K8sStepHandler(StepHandler):
         job_name = self._get_k8s_step_job_name(step_handler_context)
         pod_name = job_name
 
-        args = step_handler_context.execute_step_args.get_command_args()
+        args = step_handler_context.execute_step_args.get_command_args(with_known_state=False)
 
         container_context = self._get_container_context(step_handler_context)
 
         job_config = container_context.get_k8s_job_config(
             self._executor_image, step_handler_context.instance.run_launcher
         )
+        if step_handler_context.execute_step_args.known_state:
+            job_config.with_env_vars(
+                job_config.env_vars
+                + [
+                    f"{KNOWN_STATE_ENV_VAR}={serialize_dagster_namedtuple(step_handler_context.execute_step_args.known_state)}"
+                ]
+            )
 
         if not job_config.job_image:
             job_config = job_config.with_image(

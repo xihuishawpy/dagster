@@ -17,6 +17,7 @@ from dagster.core.errors import DagsterExecutionInterruptedError
 from dagster.core.events import DagsterEvent, DagsterEventType, EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_plan_iterator
 from dagster.core.execution.context_creation_pipeline import create_context_free_log_manager
+from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.run_cancellation_thread import start_run_cancellation_thread
 from dagster.core.instance import DagsterInstance
 from dagster.core.origin import (
@@ -37,6 +38,8 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_pipeline_from_origin
 from dagster.utils.interrupts import capture_interrupts
 from dagster.utils.log import configure_loggers
+
+KNOWN_STATE_ENV_VAR = "DAGSTER_EXECUTE_STEP_KNOWN_STATE"
 
 
 @click.group(name="api", hidden=True)
@@ -323,6 +326,12 @@ def execute_step_command(input_json):
 
         args = deserialize_as(input_json, ExecuteStepArgs)
 
+        known_state = args.known_state
+        if not known_state:
+            raw_known_state = os.environ.get(KNOWN_STATE_ENV_VAR)
+            if raw_known_state:
+                known_state = deserialize_as(raw_known_state, KnownExecutionState)
+
         with (
             DagsterInstance.from_ref(args.instance_ref)
             if args.instance_ref
@@ -332,11 +341,7 @@ def execute_step_command(input_json):
 
             buff = []
 
-            for event in _execute_step_command_body(
-                args,
-                instance,
-                pipeline_run,
-            ):
+            for event in _execute_step_command_body(args, instance, pipeline_run, known_state):
                 buff.append(serialize_dagster_namedtuple(event))
 
             for line in buff:
@@ -344,7 +349,10 @@ def execute_step_command(input_json):
 
 
 def _execute_step_command_body(
-    args: ExecuteStepArgs, instance: DagsterInstance, pipeline_run: PipelineRun
+    args: ExecuteStepArgs,
+    instance: DagsterInstance,
+    pipeline_run: PipelineRun,
+    known_state: Optional[KnownExecutionState],
 ):
     single_step_key = (
         args.step_keys_to_execute[0]
@@ -382,7 +390,7 @@ def _execute_step_command_body(
             success = verify_step(
                 instance,
                 pipeline_run,
-                check.not_none(args.known_state).get_retry_state(),
+                check.not_none(known_state).get_retry_state(),
                 args.step_keys_to_execute,
             )
             if not success:
@@ -399,7 +407,7 @@ def _execute_step_command_body(
             run_config=pipeline_run.run_config,
             step_keys_to_execute=args.step_keys_to_execute,
             mode=pipeline_run.mode,
-            known_state=args.known_state,
+            known_state=known_state,
         )
 
         yield from execute_plan_iterator(

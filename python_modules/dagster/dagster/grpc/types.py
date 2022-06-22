@@ -236,12 +236,19 @@ class ExecuteStepArgs(
             ),
         )
 
-    def get_command_args(self) -> List[str]:
-        return _get_entry_point(self.pipeline_origin) + [
-            "api",
-            "execute_step",
-            serialize_dagster_namedtuple(self),
-        ]
+    def get_command_args(self, with_known_state=True) -> List[str]:
+        if with_known_state:
+            return _get_entry_point(self.pipeline_origin) + [
+                "api",
+                "execute_step",
+                serialize_dagster_namedtuple(self),
+            ]
+        else:
+            return _get_entry_point(self.pipeline_origin) + [
+                "api",
+                "execute_step",
+                serialize_dagster_namedtuple(self._replace(known_state=None)),
+            ]
 
 
 @whitelist_for_serdes
