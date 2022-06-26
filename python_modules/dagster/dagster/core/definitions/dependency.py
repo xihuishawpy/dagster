@@ -131,15 +131,17 @@ class Node:
         self._hook_defs = check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
         self._retry_policy = check.opt_inst_param(retry_policy, "retry_policy", RetryPolicy)
 
-        input_handles = {}
-        for name, input_def in self.definition.input_dict.items():
-            input_handles[name] = SolidInputHandle(self, input_def)
+        input_handles = {
+            name: SolidInputHandle(self, input_def)
+            for name, input_def in self.definition.input_dict.items()
+        }
 
         self._input_handles = input_handles
 
-        output_handles = {}
-        for name, output_def in self.definition.output_dict.items():
-            output_handles[name] = SolidOutputHandle(self, output_def)
+        output_handles = {
+            name: SolidOutputHandle(self, output_def)
+            for name, output_def in self.definition.output_dict.items()
+        }
 
         self._output_handles = output_handles
 
@@ -337,7 +339,7 @@ class NodeHandle(
 
         Inverse of NodeHandle.from_string.
         """
-        return self.parent.to_string() + "." + self.name if self.parent else self.name
+        return f"{self.parent.to_string()}.{self.name}" if self.parent else self.name
 
     def is_or_descends_from(self, handle: "NodeHandle") -> bool:
         """Check if the handle is or descends from another handle.
@@ -413,7 +415,7 @@ class NodeHandle(
         check.list_param(path, "path", of_type=str)
 
         cur: Optional["NodeHandle"] = None
-        while len(path) > 0:
+        while path:
             cur = NodeHandle(name=path.pop(0), parent=cur)
 
         if cur is None:
@@ -709,17 +711,15 @@ class MultiDependencyDefinition(
         seen = {}
         for dep in deps:
             if isinstance(dep, DependencyDefinition):
-                key = dep.solid + ":" + dep.output
+                key = f"{dep.solid}:{dep.output}"
                 if key in seen:
                     raise DagsterInvalidDefinitionError(
                         'Duplicate dependencies on node "{dep.solid}" output "{dep.output}" '
                         "used in the same MultiDependencyDefinition.".format(dep=dep)
                     )
                 seen[key] = True
-            elif dep is MappedInputPlaceholder:
-                pass
-            else:
-                check.failed("Unexpected dependencies entry {}".format(dep))
+            elif dep is not MappedInputPlaceholder:
+                check.failed(f"Unexpected dependencies entry {dep}")
 
         return super(MultiDependencyDefinition, cls).__new__(cls, deps)
 
@@ -778,10 +778,9 @@ def _create_handle_dict(
                         handles.append(inner_dep)
                     else:
                         check.failed(
-                            "Unexpected MultiDependencyDefinition dependencies type {}".format(
-                                inner_dep
-                            )
+                            f"Unexpected MultiDependencyDefinition dependencies type {inner_dep}"
                         )
+
 
                 handle_dict[from_solid.input_handle(input_name)] = (DependencyType.FAN_IN, handles)
 
@@ -1027,9 +1026,7 @@ class DependencyStructure:
         check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
         check.invariant(self.has_deps(solid_input_handle))
         dep_type, handle_or_list = self._handle_dict[solid_input_handle]
-        if dep_type == DependencyType.DIRECT:
-            return [cast(SolidOutputHandle, handle_or_list)]
-        elif dep_type == DependencyType.DYNAMIC_COLLECT:
+        if dep_type in [DependencyType.DIRECT, DependencyType.DYNAMIC_COLLECT]:
             return [cast(SolidOutputHandle, handle_or_list)]
         elif dep_type == DependencyType.FAN_IN:
             return [handle for handle in handle_or_list if isinstance(handle, SolidOutputHandle)]
@@ -1053,8 +1050,7 @@ class DependencyStructure:
         return solid_name in self._dynamic_fan_out_index
 
     def has_dynamic_downstreams(self, solid_name: str) -> bool:
-        for upstream_handle in self._dynamic_fan_out_index.values():
-            if upstream_handle.solid_name == solid_name:
-                return True
-
-        return False
+        return any(
+            upstream_handle.solid_name == solid_name
+            for upstream_handle in self._dynamic_fan_out_index.values()
+        )

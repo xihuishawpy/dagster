@@ -15,8 +15,10 @@ def hn_dbt_run(context):
     # as dbt will output to different locations depending on which profile is being used.
 
     # if you don't use the Dagster Asset Catalog, this can be omitted.
-    for materialization in context.resources.dbt_assets.get_asset_materializations(dbt_cli_output):
-        yield materialization
+    yield from context.resources.dbt_assets.get_asset_materializations(
+        dbt_cli_output
+    )
+
     yield Output(dbt_cli_output)
 
 

@@ -69,15 +69,16 @@ def parse_xml(raw_articles):
     rows = []
     for article in raw_articles:
         category_names = [x.text for x in article.findall("category")]
-        for category in category_names:
-            rows.append(
-                {
-                    "Title": article.find("title").text,
-                    "Link": article.find("link").text,
-                    "Category": category,
-                    "Description": article.find("description").text,
-                }
-            )
+        rows.extend(
+            {
+                "Title": article.find("title").text,
+                "Link": article.find("link").text,
+                "Category": category,
+                "Description": article.find("description").text,
+            }
+            for category in category_names
+        )
+
     return rows
 
 

@@ -44,8 +44,9 @@ class _Repository:
 
         repository_data: Union[CachingRepositoryData, RepositoryData]
         if isinstance(repository_definitions, list):
-            bad_definitions = []
-            for i, definition in enumerate(repository_definitions):
+            if bad_definitions := [
+                (i, type(definition))
+                for i, definition in enumerate(repository_definitions)
                 if not (
                     isinstance(definition, PipelineDefinition)
                     or isinstance(definition, PartitionSetDefinition)
@@ -56,9 +57,8 @@ class _Repository:
                     or isinstance(definition, AssetsDefinition)
                     or isinstance(definition, SourceAsset)
                     or isinstance(definition, UnresolvedAssetJobDefinition)
-                ):
-                    bad_definitions.append((i, type(definition)))
-            if bad_definitions:
+                )
+            ]:
                 bad_definitions_str = ", ".join(
                     [
                         "value of type {type_} at index {i}".format(type_=type_, i=i)

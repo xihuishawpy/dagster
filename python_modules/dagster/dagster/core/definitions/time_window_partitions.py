@@ -51,11 +51,7 @@ class TimeWindowPartitionsDefinition(
         hour_offset: int = 0,
         day_offset: Optional[int] = None,
     ):
-        if isinstance(start, str):
-            start_dt = datetime.strptime(start, fmt)
-        else:
-            start_dt = start
-
+        start_dt = datetime.strptime(start, fmt) if isinstance(start, str) else start
         return super(TimeWindowPartitionsDefinition, cls).__new__(
             cls,
             schedule_type,
@@ -209,9 +205,14 @@ def wrap_time_window_tags_fn(
     tags_fn: Optional[Callable[[datetime, datetime], Dict[str, str]]]
 ) -> Callable[[Partition], Dict[str, str]]:
     def _tag_wrapper(partition: Partition) -> Dict[str, str]:
-        if not tags_fn:
-            return {}
-        return tags_fn(cast(datetime, partition.value[0]), cast(datetime, partition.value[1]))
+        return (
+            tags_fn(
+                cast(datetime, partition.value[0]),
+                cast(datetime, partition.value[1]),
+            )
+            if tags_fn
+            else {}
+        )
 
     return _tag_wrapper
 

@@ -87,10 +87,9 @@ class DefinitionConfigSchema(IDefinitionConfigSchema):
 def _get_user_code_error_str_lambda(
     configured_definition: "ConfigurableDefinition",
 ) -> Callable[[], str]:
-    return lambda: (
-        "The config mapping function on a `configured` {} has thrown an unexpected "
-        "error during its execution."
-    ).format(configured_definition.__class__.__name__)
+    return (
+        lambda: f"The config mapping function on a `configured` {configured_definition.__class__.__name__} has thrown an unexpected error during its execution."
+    )
 
 
 class ConfiguredDefinitionConfigSchema(IDefinitionConfigSchema):
@@ -104,10 +103,11 @@ class ConfiguredDefinitionConfigSchema(IDefinitionConfigSchema):
 
         self._current_field = config_schema.as_field() if config_schema else None
 
-        if not callable(config_or_config_fn):
-            self._config_fn = lambda _: config_or_config_fn
-        else:
-            self._config_fn = config_or_config_fn
+        self._config_fn = (
+            config_or_config_fn
+            if callable(config_or_config_fn)
+            else (lambda _: config_or_config_fn)
+        )
 
     def as_field(self) -> Field:
         return self._current_field

@@ -32,11 +32,11 @@ SMOKE_TEST_QUERY = """
 def test_smoke_app(gen_instance):
     with gen_instance() as instance:
         with get_workspace_process_context_from_kwargs(
-            instance,
-            version="",
-            read_only=False,
-            kwargs=dict(module_name="dagit_tests.toy.bar_repo", definition="bar"),
-        ) as workspace_process_context:
+                    instance,
+                    version="",
+                    read_only=False,
+                    kwargs=dict(module_name="dagit_tests.toy.bar_repo", definition="bar"),
+                ) as workspace_process_context:
 
             asgi_app = app.create_app_from_workspace_process_context(workspace_process_context)
             client = TestClient(asgi_app)
@@ -51,8 +51,11 @@ def test_smoke_app(gen_instance):
             assert len(data["data"]["repositoriesOrError"]["nodes"][0]["pipelines"]) == 2
             assert {
                 node_data["name"]
-                for node_data in data["data"]["repositoriesOrError"]["nodes"][0]["pipelines"]
-            } == set(["foo", "baz"])
+                for node_data in data["data"]["repositoriesOrError"]["nodes"][
+                    0
+                ]["pipelines"]
+            } == {"foo", "baz"}
+
 
             result = client.get("/graphql")
             assert result.status_code == 400

@@ -95,7 +95,7 @@ def find_screenshot_spec(screenshot_path: str) -> Mapping[str, Any]:
         print("Multiple matching screenshot paths")
         sys.exit(1)
 
-    if len(matching_specs) == 0:
+    if not matching_specs:
         print("No matching screenshot paths")
         sys.exit(1)
 

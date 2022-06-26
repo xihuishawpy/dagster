@@ -10,14 +10,12 @@ from .mylib import s3_io_manager, snowflake_io_manager, train_recommender_model
     out={"users": Out(io_manager_key="warehouse")},
 )
 def build_users(raw_users: DataFrame) -> DataFrame:
-    users_df = raw_users.dropna()
-    return users_df
+    return raw_users.dropna()
 
 
 @op(out={"users_recommender_model": Out(io_manager_key="object_store")})
 def build_user_recommender_model(users: DataFrame):
-    users_recommender_model = train_recommender_model(users)
-    return users_recommender_model
+    return train_recommender_model(users)
 
 
 @job(resource_defs={"warehouse": snowflake_io_manager, "object_store": s3_io_manager})

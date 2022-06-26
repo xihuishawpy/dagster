@@ -18,10 +18,11 @@ run_this_last = DummyOperator(
 
 for i in range(3):
     task = BashOperator(
-        task_id="get_task_instance_" + str(i),
+        task_id=f"get_task_instance_{str(i)}",
         bash_command='echo "{{ task_instance_key_str }}" && sleep 1',
         dag=simple_dag,
     )
+
     task >> run_this_last
 
 also_run_this = BashOperator(

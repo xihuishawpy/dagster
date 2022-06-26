@@ -88,7 +88,7 @@ def validate_tags(tags: Optional[Dict[str, Any]], allow_reserved_tags=True) -> D
     for key, value in check.opt_dict_param(tags, "tags", key_type=str).items():
         if not isinstance(value, str):
             valid = False
-            err_reason = 'Could not JSON encode value "{}"'.format(value)
+            err_reason = f'Could not JSON encode value "{value}"'
             try:
                 str_val = seven.json.dumps(value)
                 err_reason = 'JSON encoding "{json}" of value "{val}" is not equivalent to original value'.format(
@@ -119,9 +119,7 @@ def validate_tags(tags: Optional[Dict[str, Any]], allow_reserved_tags=True) -> D
 
 def validate_group_name(group_name: Optional[str]) -> str:
     """Ensures a string name is valid and returns a default if no name provided."""
-    if group_name:
-        return check_valid_name(group_name)
-    return DEFAULT_GROUP_NAME
+    return check_valid_name(group_name) if group_name else DEFAULT_GROUP_NAME
 
 
 def config_from_files(config_files: List[str]) -> Dict[str, Any]:

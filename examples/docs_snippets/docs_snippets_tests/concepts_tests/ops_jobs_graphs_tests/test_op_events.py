@@ -19,27 +19,22 @@ from docs_snippets.concepts.ops_jobs_graphs.op_events import (
 def execute_op_in_graph(an_op, **kwargs):
     @graph
     def my_graph():
-        if kwargs:
-            return an_op(**kwargs)
-        else:
-            return an_op()
+        return an_op(**kwargs) if kwargs else an_op()
 
     result = my_graph.execute_in_process()
     return result
 
 
 def generate_stub_input_values(op):
-    input_values = {}
-
     default_values = {"String": "abc", "Int": 1, "Any": []}
 
     input_defs = op.input_defs
-    for input_def in input_defs:
-        input_values[input_def.name] = default_values[
+    return {
+        input_def.name: default_values[
             str(input_def.dagster_type.display_name)
         ]
-
-    return input_values
+        for input_def in input_defs
+    }
 
 
 def test_ops_compile_and_execute():

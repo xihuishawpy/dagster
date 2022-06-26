@@ -74,8 +74,9 @@ class SourceAsset(
         metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
         metadata_entries = _metadata_entries or normalize_metadata(metadata, [], allow_invalid=True)
         resource_defs = dict(check.opt_mapping_param(resource_defs, "resource_defs"))
-        io_manager_def = check.opt_inst_param(io_manager_def, "io_manager_def", IOManagerDefinition)
-        if io_manager_def:
+        if io_manager_def := check.opt_inst_param(
+            io_manager_def, "io_manager_def", IOManagerDefinition
+        ):
             if not io_manager_key:
                 source_asset_path = "__".join(key.path)
                 io_manager_key = f"{source_asset_path}__io_manager"
@@ -119,8 +120,9 @@ class SourceAsset(
     def with_resources(self, resource_defs) -> "SourceAsset":
         from dagster.core.execution.resources_init import get_transitive_required_resource_keys
 
-        overlapping_keys = get_resource_key_conflicts(self.resource_defs, resource_defs)
-        if overlapping_keys:
+        if overlapping_keys := get_resource_key_conflicts(
+            self.resource_defs, resource_defs
+        ):
             raise DagsterInvalidInvocationError(
                 f"SourceAsset with key {self.key} has conflicting resource "
                 "definitions with provided resources for the following keys: "

@@ -151,55 +151,54 @@ class SolidDefinition(NodeDefinition):
 
         if is_in_composition():
             return super(SolidDefinition, self).__call__(*args, **kwargs)
-        else:
-            node_label = self.node_type_str  # string "solid" for solids, "op" for ops
+        node_label = self.node_type_str  # string "solid" for solids, "op" for ops
 
-            if not isinstance(self.compute_fn, DecoratedSolidFunction):
+        if not isinstance(self.compute_fn, DecoratedSolidFunction):
+            raise DagsterInvalidInvocationError(
+                f"Attemped to invoke {node_label} that was not constructed using the `@{node_label}` "
+                f"decorator. Only {node_label}s constructed using the `@{node_label}` decorator can be "
+                "directly invoked."
+            )
+        if self.compute_fn.has_context_arg():
+            if len(args) + len(kwargs) == 0:
                 raise DagsterInvalidInvocationError(
-                    f"Attemped to invoke {node_label} that was not constructed using the `@{node_label}` "
-                    f"decorator. Only {node_label}s constructed using the `@{node_label}` decorator can be "
-                    "directly invoked."
+                    f"Compute function of {node_label} '{self.name}' has context argument, but no context "
+                    "was provided when invoking."
                 )
-            if self.compute_fn.has_context_arg():
-                if len(args) + len(kwargs) == 0:
+            if len(args) > 0:
+                if args[0] is not None and not isinstance(
+                    args[0], UnboundSolidExecutionContext
+                ):
                     raise DagsterInvalidInvocationError(
-                        f"Compute function of {node_label} '{self.name}' has context argument, but no context "
-                        "was provided when invoking."
+                        f"Compute function of {node_label} '{self.name}' has context argument, "
+                        "but no context was provided when invoking."
                     )
-                if len(args) > 0:
-                    if args[0] is not None and not isinstance(
-                        args[0], UnboundSolidExecutionContext
-                    ):
-                        raise DagsterInvalidInvocationError(
-                            f"Compute function of {node_label} '{self.name}' has context argument, "
-                            "but no context was provided when invoking."
-                        )
-                    context = args[0]
-                    return solid_invocation_result(self, context, *args[1:], **kwargs)
-                # Context argument is provided under kwargs
-                else:
-                    context_param_name = get_function_params(self.compute_fn.decorated_fn)[0].name
-                    if context_param_name not in kwargs:
-                        raise DagsterInvalidInvocationError(
-                            f"Compute function of {node_label} '{self.name}' has context argument "
-                            f"'{context_param_name}', but no value for '{context_param_name}' was "
-                            f"found when invoking. Provided kwargs: {kwargs}"
-                        )
-                    context = kwargs[context_param_name]
-                    kwargs_sans_context = {
-                        kwarg: val
-                        for kwarg, val in kwargs.items()
-                        if not kwarg == context_param_name
-                    }
-                    return solid_invocation_result(self, context, *args, **kwargs_sans_context)
-
+                context = args[0]
+                return solid_invocation_result(self, context, *args[1:], **kwargs)
             else:
-                if len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
+                context_param_name = get_function_params(self.compute_fn.decorated_fn)[0].name
+                if context_param_name not in kwargs:
                     raise DagsterInvalidInvocationError(
-                        f"Compute function of {node_label} '{self.name}' has no context argument, but "
-                        "context was provided when invoking."
+                        f"Compute function of {node_label} '{self.name}' has context argument "
+                        f"'{context_param_name}', but no value for '{context_param_name}' was "
+                        f"found when invoking. Provided kwargs: {kwargs}"
                     )
-                return solid_invocation_result(self, None, *args, **kwargs)
+                context = kwargs[context_param_name]
+                kwargs_sans_context = {
+                    kwarg: val
+                    for kwarg, val in kwargs.items()
+                    if kwarg != context_param_name
+                }
+
+                return solid_invocation_result(self, context, *args, **kwargs_sans_context)
+
+        elif len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
+            raise DagsterInvalidInvocationError(
+                f"Compute function of {node_label} '{self.name}' has no context argument, but "
+                "context was provided when invoking."
+            )
+        else:
+            return solid_invocation_result(self, None, *args, **kwargs)
 
     @property
     def node_type_str(self) -> str:
@@ -247,7 +246,7 @@ class SolidDefinition(NodeDefinition):
         for input_def in self.input_defs:
             if (
                 not input_def.dagster_type.loader
-                and not input_def.dagster_type.kind == DagsterTypeKind.NOTHING
+                and input_def.dagster_type.kind != DagsterTypeKind.NOTHING
                 and not input_def.root_manager_key
                 and not input_def.has_default_value
             ):
@@ -297,13 +296,13 @@ class SolidDefinition(NodeDefinition):
         self,
         outer_context: Optional[object] = None,
     ) -> Iterator[ResourceRequirement]:
-        # Outer requiree in this context is the outer-calling node handle. If not provided, then just use the solid name.
-        outer_context = cast(Optional[Tuple[NodeHandle, Optional["AssetLayer"]]], outer_context)
-        if not outer_context:
+        if outer_context := cast(
+            Optional[Tuple[NodeHandle, Optional["AssetLayer"]]], outer_context
+        ):
+            handle, asset_layer = outer_context
+        else:
             handle = None
             asset_layer = None
-        else:
-            handle, asset_layer = outer_context
         node_description = f"{self.node_type_str} '{handle or self.name}'"
         for resource_key in sorted(list(self.required_resource_keys)):
             yield SolidDefinitionResourceRequirement(
@@ -317,8 +316,9 @@ class SolidDefinition(NodeDefinition):
                     input_name=input_def.name,
                 )
             elif asset_layer and handle:
-                input_asset_key = asset_layer.asset_key_for_input(handle, input_def.name)
-                if input_asset_key:
+                if input_asset_key := asset_layer.asset_key_for_input(
+                    handle, input_def.name
+                ):
                     io_manager_key = asset_layer.io_manager_key_for_asset(input_asset_key)
                     yield InputManagerRequirement(
                         key=io_manager_key,

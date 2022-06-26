@@ -32,7 +32,7 @@ def validate_dependency_dict(
         )
 
     for key, dep_dict in dependencies.items():
-        if not (isinstance(key, str) or isinstance(key, NodeInvocation)):
+        if not isinstance(key, (str, NodeInvocation)):
             raise DagsterInvalidDefinitionError(
                 prelude + "Expected str or NodeInvocation key in the top level dict. "
                 "Received value {val} of type {type}".format(val=key, type=type(key))
@@ -56,9 +56,9 @@ def validate_dependency_dict(
         for input_key, dep in dep_dict.items():
             if not isinstance(input_key, str):
                 raise DagsterInvalidDefinitionError(
-                    prelude + f"Received non-string key in the inner dict for key {key}. "
-                    f"Unexpected inner dict key type: {type(input_key)}"
+                    f"{prelude}Received non-string key in the inner dict for key {key}. Unexpected inner dict key type: {type(input_key)}"
                 )
+
             if not isinstance(dep, IDependencyDefinition):
                 raise DagsterInvalidDefinitionError(
                     prelude
@@ -207,7 +207,7 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
                         ).format(from_solid=from_solid, from_input=from_input)
                     )
 
-                if not from_solid in solid_dict:
+                if from_solid not in solid_dict:
                     aliased_solid = alias_to_name.get(from_solid)
                     if aliased_solid == from_solid:
                         raise DagsterInvalidDefinitionError(
@@ -238,7 +238,7 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
                         + "Available inputs: {input_list}".format(input_list=list(input_list))
                     )
 
-                if not dep.solid in solid_dict:
+                if dep.solid not in solid_dict:
                     raise DagsterInvalidDefinitionError(
                         'Invalid dependencies: node "{dep.solid}" not found in node list. '
                         'Listed as dependency for node "{from_solid}" input "{from_input}" '.format(
@@ -274,7 +274,7 @@ def _validate_input_output_pair(input_def, output_def, from_solid, dep):
     # Here we check for the case where no value will be provided where one is expected.
     if (
         output_def.dagster_type.kind == DagsterTypeKind.NOTHING
-        and not input_def.dagster_type.kind == DagsterTypeKind.NOTHING
+        and input_def.dagster_type.kind != DagsterTypeKind.NOTHING
     ):
         raise DagsterInvalidDefinitionError(
             (

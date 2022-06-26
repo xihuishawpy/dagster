@@ -6,13 +6,14 @@ import click
 
 
 def check_output(cmd: List[str], dry_run: bool = True, cwd: Optional[str] = None) -> Optional[str]:
-    if dry_run:
-        click.echo(
-            click.style("Dry run; not running.", fg="red") + " Would run: %s" % " ".join(cmd)
-        )
-        return None
-    else:
+    if not dry_run:
         return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT, cwd=cwd)
+    click.echo(
+        click.style("Dry run; not running.", fg="red")
+        + f' Would run: {" ".join(cmd)}'
+    )
+
+    return None
 
 
 def which_(exe: str) -> Optional[str]:

@@ -48,11 +48,7 @@ def asset_wipe_command(key, **cli_args):
             asset_keys = instance.all_asset_keys()
             prompt = "Are you sure you want to remove all asset key indexes from the event logs? Type DELETE"
 
-        if noprompt:
-            confirmation = "DELETE"
-        else:
-            confirmation = click.prompt(prompt)
-
+        confirmation = "DELETE" if noprompt else click.prompt(prompt)
         if confirmation == "DELETE":
             with DagsterInstance.get() as instance:
                 instance.wipe_assets(asset_keys)

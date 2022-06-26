@@ -340,7 +340,7 @@ class JobDefinition(PipelineDefinition):
             "Asset layer must have _asset_defs argument defined",
         )
 
-        new_job = build_asset_selection_job(
+        return build_asset_selection_job(
             name=self.name,
             assets=set(self.asset_layer.assets_defs_by_key.values()),
             source_assets=self.asset_layer.source_assets_by_key.values(),
@@ -351,7 +351,6 @@ class JobDefinition(PipelineDefinition):
             asset_selection=asset_selection,
             asset_selection_data=asset_selection_data,
         )
-        return new_job
 
     def _get_job_def_for_op_selection(
         self,
@@ -646,7 +645,4 @@ def get_subselected_graph_definition(
 
 
 def get_direct_input_values_from_job(target: PipelineDefinition) -> Mapping[str, Any]:
-    if target.is_job:
-        return cast(JobDefinition, target)._input_values  # pylint: disable=protected-access
-    else:
-        return {}
+    return cast(JobDefinition, target)._input_values if target.is_job else {}

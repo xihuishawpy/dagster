@@ -42,10 +42,7 @@ class ResourceRequirement(ABC):
     def is_io_manager_requirement(self) -> bool:
         from ..storage.io_manager import IInputManagerDefinition, IOManagerDefinition
 
-        return (
-            self.expected_type == IOManagerDefinition
-            or self.expected_type == IInputManagerDefinition
-        )
+        return self.expected_type in [IOManagerDefinition, IInputManagerDefinition]
 
     def keys_of_expected_type(self, resource_defs: Mapping[str, "ResourceDefinition"]) -> List[str]:
         """Get resource keys that correspond to resource definitions of expected type.

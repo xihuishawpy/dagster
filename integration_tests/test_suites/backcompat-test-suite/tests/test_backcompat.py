@@ -141,8 +141,10 @@ def docker_service_up(docker_compose_file, build_args=None):
         pass
 
     build_process = subprocess.Popen(
-        [file_relative_path(docker_compose_file, "./build.sh")] + (build_args if build_args else [])
+        [file_relative_path(docker_compose_file, "./build.sh")]
+        + (build_args or [])
     )
+
     build_process.wait()
     assert build_process.returncode == 0
 

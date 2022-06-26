@@ -8,17 +8,18 @@ from dagster import execute_pipeline
 
 
 def run_pipeline(path_to_dir):
-    result = execute_pipeline(
+    # end_loop_marker_1
+    return execute_pipeline(
         user_in_the_loop_pipeline,
         # start_loop_marker_1
         run_config={
             "solids": {
-                "wait_for_condition_met": {"config": {"file_path": f"{path_to_dir}/data.csv"}}
+                "wait_for_condition_met": {
+                    "config": {"file_path": f"{path_to_dir}/data.csv"}
+                }
             }
         },
     )
-    # end_loop_marker_1
-    return result
 
 
 def create_file(path_to_dir):

@@ -15,9 +15,7 @@ from dagster import asset
 def cereals():
     response = requests.get("https://docs.dagster.io/assets/cereal.csv")
     lines = response.text.split("\n")
-    cereal_rows = [row for row in csv.DictReader(lines)]
-
-    return cereal_rows
+    return list(csv.DictReader(lines))
 
 
 # end_asset_marker
@@ -32,7 +30,7 @@ from dagster import asset
 def cereals():
     response = requests.get("https://docs.dagster.io/assets/cereal.csv")
     lines = response.text.split("\n")
-    return [row for row in csv.DictReader(lines)]
+    return list(csv.DictReader(lines))
 
 
 @asset

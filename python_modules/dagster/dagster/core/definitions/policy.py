@@ -105,9 +105,7 @@ def calculate_delay(attempt_num, backoff, jitter, base_delay):
         calc_delay = random() * calc_delay
     elif jitter is Jitter.PLUS_MINUS:
         calc_delay = calc_delay + ((2 * (random() * base_delay)) - base_delay)
-    elif jitter is None:
-        pass
-    else:
+    elif jitter is not None:
         check.assert_never(jitter)
 
     return calc_delay

@@ -66,7 +66,7 @@ def test_daemon(instance: DagsterInstance, empty_workspace):
     # not called again for same event
     daemon.run_records = []  # reset this since it will keep the value from the last call
     list(daemon.run_iteration(instance, empty_workspace))
-    assert daemon.run_records == []
+    assert not daemon.run_records
 
 
 def test_events_exceed_limit(instance: DagsterInstance, empty_workspace):

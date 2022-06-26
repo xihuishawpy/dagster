@@ -395,29 +395,26 @@ class ScheduleDefinition:
                 context = check.opt_inst_param(
                     args[0], context_param_name, ScheduleEvaluationContext
                 )
-            else:
-                if context_param_name not in kwargs:
-                    raise DagsterInvalidInvocationError(
-                        f"Schedule invocation expected argument '{context_param_name}'."
-                    )
+            elif context_param_name in kwargs:
                 context = check.opt_inst_param(
                     kwargs[context_param_name], context_param_name, ScheduleEvaluationContext
                 )
 
-            context = context if context else build_schedule_context()
+            else:
+                raise DagsterInvalidInvocationError(
+                    f"Schedule invocation expected argument '{context_param_name}'."
+                )
+            context = context or build_schedule_context()
 
             result = self._execution_fn.decorated_fn(context)  # type: ignore
+        elif len(args) + len(kwargs) > 0:
+            raise DagsterInvalidInvocationError(
+                "Decorated schedule function takes no arguments, but arguments were provided."
+            )
         else:
-            if len(args) + len(kwargs) > 0:
-                raise DagsterInvalidInvocationError(
-                    "Decorated schedule function takes no arguments, but arguments were provided."
-                )
             result = self._execution_fn.decorated_fn()  # type: ignore
 
-        if isinstance(result, dict):
-            return copy.deepcopy(result)
-        else:
-            return result
+        return copy.deepcopy(result) if isinstance(result, dict) else result
 
     @property
     def name(self) -> str:
@@ -498,9 +495,10 @@ class ScheduleDefinition:
             # (pyright reads it fine). Hence the type-ignores below.
             result = cast(List[RunRequest], check.is_list(result, of_type=RunRequest))  # type: ignore
             check.invariant(
-                not any(not request.run_key for request in result),  # type: ignore
+                all(request.run_key for request in result),
                 "Schedules that return multiple RunRequests must specify a run_key in each RunRequest",
             )
+
             run_requests = result  # type: ignore
             skip_message = None
 

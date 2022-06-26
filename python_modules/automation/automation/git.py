@@ -74,15 +74,16 @@ def get_git_tag() -> str:
             )
         ).strip("'b\\n")
     except subprocess.CalledProcessError as exc_info:
-        match = re.search(
-            "fatal: no tag exactly matches '(?P<commit>[a-z0-9]+)'", str(exc_info.output)
-        )
-        if match:
+        if match := re.search(
+            "fatal: no tag exactly matches '(?P<commit>[a-z0-9]+)'",
+            str(exc_info.output),
+        ):
             raise Exception(
                 "Bailing: there is no git tag for the current commit, {commit}".format(
-                    commit=match.group("commit")
+                    commit=match["commit"]
                 )
             )
+
         raise Exception(str(exc_info.output))
 
     return git_tag
@@ -101,58 +102,53 @@ def get_most_recent_git_tag() -> str:
 
 
 def get_git_repo_branch(cwd: Optional[str] = None) -> str:
-    git_branch = (
+    return (
         subprocess.check_output(["git", "branch", "--show-current"], cwd=cwd)
         .decode("utf-8")
         .strip()
     )
-    return git_branch
 
 
 def set_git_tag(tag: str, signed: bool = False, dry_run: bool = True) -> str:
     try:
-        if signed:
-            if not dry_run:
+        if not dry_run:
+            if signed:
                 subprocess.check_output(
                     ["git", "tag", "-s", "-m", tag, tag], stderr=subprocess.STDOUT
                 )
-        else:
-            if not dry_run:
+            else:
                 subprocess.check_output(
                     ["git", "tag", "-a", "-m", tag, tag], stderr=subprocess.STDOUT
                 )
 
     except subprocess.CalledProcessError as exc_info:
-        match = re.search("error: gpg failed to sign the data", str(exc_info.output))
-        if match:
+        if match := re.search(
+            "error: gpg failed to sign the data", str(exc_info.output)
+        ):
             raise Exception(
                 "Bailing: cannot sign tag. You may find "
                 "https://stackoverflow.com/q/39494631/324449 helpful. Original error "
                 "output:\n{output}".format(output=str(exc_info.output))
             )
 
-        match = re.search(
-            r"fatal: tag \'(?P<tag>[\.a-z0-9]+)\' already exists", str(exc_info.output)
-        )
-        if match:
+        if match := re.search(
+            r"fatal: tag \'(?P<tag>[\.a-z0-9]+)\' already exists",
+            str(exc_info.output),
+        ):
             raise Exception(
                 "Bailing: cannot release version tag {tag}: already exists".format(
-                    tag=match.group("tag")
+                    tag=match["tag"]
                 )
             )
+
         raise Exception(str(exc_info.output))
 
     return tag
 
 
 def git_commit_updates(repo_dir: str, message: str) -> None:
-    cmds = [
-        "git add -A",
-        'git commit -m "{}"'.format(message),
-    ]
+    cmds = ["git add -A", f'git commit -m "{message}"']
 
-    print(  # pylint: disable=print-call
-        "Committing to {} with message {}".format(repo_dir, message)
-    )
+    print(f"Committing to {repo_dir} with message {message}")
     for cmd in cmds:
         subprocess.call(cmd, cwd=repo_dir, shell=True)

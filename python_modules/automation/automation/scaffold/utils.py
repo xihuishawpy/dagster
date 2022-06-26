@@ -4,9 +4,7 @@ import shutil
 def copy_directory(src: str, dest: str) -> None:
     try:
         shutil.copytree(src, dest, ignore=shutil.ignore_patterns(".DS_Store"))
-    # Directories are the same
     except shutil.Error as e:
-        print("Directory not copied. Error: %s" % e)  # pylint: disable=print-call
-    # Any error saying that the directory doesn't exist
+        print(f"Directory not copied. Error: {e}")
     except OSError as e:
-        print("Directory not copied. Error: %s" % e)  # pylint: disable=print-call
+        print(f"Directory not copied. Error: {e}")

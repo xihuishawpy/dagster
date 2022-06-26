@@ -31,8 +31,7 @@ class CustomRunCoordinator(QueuedRunCoordinator):
     def submit_run(self, context: SubmitRunContext) -> PipelineRun:
         pipeline_run = context.pipeline_run
         jwt_claims_header = context.get_request_header("X-Amzn-Oidc-Data")
-        email = self.get_email(jwt_claims_header)
-        if email:
+        if email := self.get_email(jwt_claims_header):
             self._instance.add_run_tags(pipeline_run.run_id, {"user": email})
         else:
             warnings.warn(f"Couldn't decode JWT header {jwt_claims_header}")

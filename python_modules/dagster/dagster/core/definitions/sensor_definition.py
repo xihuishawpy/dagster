@@ -211,7 +211,7 @@ class SensorDefinition:
             )
 
         job_param_name = "job" if job else "jobs"
-        jobs = jobs if jobs else [job] if job else None
+        jobs = jobs or ([job] if job else None)
 
         if pipeline_name and jobs:
             raise DagsterInvalidDefinitionError(
@@ -245,11 +245,7 @@ class SensorDefinition:
         elif jobs:
             targets = [DirectTarget(job) for job in jobs]
 
-        if name:
-            self._name = check_valid_name(name)
-        else:
-            self._name = evaluation_fn.__name__
-
+        self._name = check_valid_name(name) if name else evaluation_fn.__name__
         self._raw_fn: RawSensorEvaluationFunction = check.callable_param(
             evaluation_fn, "evaluation_fn"
         )
@@ -283,16 +279,16 @@ class SensorDefinition:
 
             if args:
                 context = check.opt_inst_param(args[0], context_param_name, SensorEvaluationContext)
-            else:
-                if context_param_name not in kwargs:
-                    raise DagsterInvalidInvocationError(
-                        f"Sensor invocation expected argument '{context_param_name}'."
-                    )
+            elif context_param_name in kwargs:
                 context = check.opt_inst_param(
                     kwargs[context_param_name], context_param_name, SensorEvaluationContext
                 )
 
-            context = context if context else build_sensor_context()
+            else:
+                raise DagsterInvalidInvocationError(
+                    f"Sensor invocation expected argument '{context_param_name}'."
+                )
+            context = context or build_sensor_context()
 
             return self._raw_fn(context)
 
@@ -365,9 +361,9 @@ class SensorDefinition:
             check.is_list(result, (SkipReason, RunRequest, PipelineRunReaction))
             has_skip = any(map(lambda x: isinstance(x, SkipReason), result))
             has_run_request = any(map(lambda x: isinstance(x, RunRequest), result))
-            has_run_reaction = any(map(lambda x: isinstance(x, PipelineRunReaction), result))
-
             if has_skip:
+                has_run_reaction = any(map(lambda x: isinstance(x, PipelineRunReaction), result))
+
                 if has_run_request:
                     check.failed(
                         "Expected a single SkipReason or one or more RunRequests: received both "
@@ -400,19 +396,16 @@ class SensorDefinition:
         )
 
     def has_loadable_targets(self) -> bool:
-        for target in self._targets:
-            if isinstance(target, DirectTarget):
-                return True
-        return False
+        return any(isinstance(target, DirectTarget) for target in self._targets)
 
     def load_targets(
         self,
     ) -> List[Union[PipelineDefinition, GraphDefinition, UnresolvedAssetJobDefinition]]:
-        targets = []
-        for target in self._targets:
-            if isinstance(target, DirectTarget):
-                targets.append(target.load())
-        return targets
+        return [
+            target.load()
+            for target in self._targets
+            if isinstance(target, DirectTarget)
+        ]
 
     def check_valid_run_requests(self, run_requests: List[RunRequest]):
         has_multiple_targets = len(self._targets) > 1
@@ -499,14 +492,9 @@ def wrap_sensor_evaluation(
     fn: RawSensorEvaluationFunction,
 ) -> SensorEvaluationFunction:
     def _wrapped_fn(context: SensorEvaluationContext):
-        if is_context_provided(fn):
-            result = fn(context)
-        else:
-            result = fn()  # type: ignore
-
+        result = fn(context) if is_context_provided(fn) else fn()
         if inspect.isgenerator(result) or isinstance(result, list):
-            for item in result:
-                yield item
+            yield from result
         elif isinstance(result, (SkipReason, RunRequest)):
             yield result
 
@@ -649,8 +637,7 @@ class AssetSensorDefinition(SensorDefinition):
                 event_record = event_records[0]
                 result = materialization_fn(context, event_record.event_log_entry)
                 if inspect.isgenerator(result) or isinstance(result, list):
-                    for item in result:
-                        yield item
+                    yield from result
                 elif isinstance(result, (SkipReason, RunRequest)):
                     yield result
                 context.update_cursor(str(event_record.storage_id))

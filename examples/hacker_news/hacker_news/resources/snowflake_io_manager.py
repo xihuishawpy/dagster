@@ -18,10 +18,7 @@ from dagster import AssetKey, IOManager, InputContext, MetadataEntry, OutputCont
 def spark_field_to_snowflake_type(spark_field: StructField):
     # Snowflake does not have a long type (all integer types have the same precision)
     spark_type = spark_field.dataType.typeName()
-    if spark_type == "long":
-        return "integer"
-    else:
-        return spark_type
+    return "integer" if spark_type == "long" else spark_type
 
 
 SHARED_SNOWFLAKE_CONF = {
@@ -173,14 +170,13 @@ class SnowflakeIOManager(IOManager):
         columns: Optional[Sequence[str]],
         partition_bounds: Optional[Mapping[str, str]],
     ):
-        col_str = ", ".join(columns) if columns else "*"
         if partition_bounds:
             return (
                 f"""SELECT * FROM {self._config["database"]}.{schema}.{table}\n"""
                 + self._partition_where_clause(partition_bounds)
             )
-        else:
-            return f"""SELECT {col_str} FROM {schema}.{table}"""
+        col_str = ", ".join(columns) if columns else "*"
+        return f"""SELECT {col_str} FROM {schema}.{table}"""
 
     def _partition_where_clause(self, partition_bounds: Mapping[str, str]) -> str:
         return f"""WHERE TO_TIMESTAMP(time::INT) BETWEEN '{partition_bounds["start"]}' AND '{partition_bounds["end"]}'"""

@@ -19,10 +19,7 @@ class PandasIOManager(IOManager):
         if isinstance(obj, pd.DataFrame):
             # write df to table
             obj.to_sql(name=context.asset_key.path[-1], con=self._con, if_exists="replace")
-        elif obj is None:
-            # dbt has already written the data to this table
-            pass
-        else:
+        elif obj is not None:
             raise check.CheckError(f"Unsupported object type {type(obj)} for PandasIOManager.")
 
     def load_input(self, context) -> pd.DataFrame:

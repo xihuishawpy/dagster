@@ -260,21 +260,20 @@ def test_dagit_logs(_, caplog):
                         expected_num_pipelines_in_repo
                     )
 
-                assert set(message.keys()) == set(
-                    [
-                        "action",
-                        "client_time",
-                        "elapsed_time",
-                        "event_id",
-                        "instance_id",
-                        "python_version",
-                        "run_storage_id",
-                        "metadata",
-                        "dagster_version",
-                        "os_desc",
-                        "os_platform",
-                    ]
-                )
+                assert set(message.keys()) == {
+                    "action",
+                    "client_time",
+                    "elapsed_time",
+                    "event_id",
+                    "instance_id",
+                    "python_version",
+                    "run_storage_id",
+                    "metadata",
+                    "dagster_version",
+                    "os_desc",
+                    "os_platform",
+                }
 
-            assert actions == set([START_DAGIT_WEBSERVER, UPDATE_REPO_STATS])
+
+            assert actions == {START_DAGIT_WEBSERVER, UPDATE_REPO_STATS}
             assert len(records) == 3

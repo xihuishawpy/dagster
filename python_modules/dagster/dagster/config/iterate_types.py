@@ -16,7 +16,7 @@ def iterate_config_types(config_type: ConfigType) -> Generator[ConfigType, None,
         yield from iterate_config_types(config_type.key_type)  # type: ignore
         yield from iterate_config_types(config_type.inner_type)  # type: ignore
 
-    if config_type.kind == ConfigTypeKind.ARRAY or config_type.kind == ConfigTypeKind.NONEABLE:
+    if config_type.kind in [ConfigTypeKind.ARRAY, ConfigTypeKind.NONEABLE]:
         yield from iterate_config_types(config_type.inner_type)  # type: ignore
 
     if ConfigTypeKind.has_fields(config_type.kind):

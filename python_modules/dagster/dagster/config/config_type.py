@@ -33,17 +33,17 @@ class ConfigTypeKind(PythonEnum):
     @staticmethod
     def is_closed_generic(kind: "ConfigTypeKind") -> bool:
         check.inst_param(kind, "kind", ConfigTypeKind)
-        return (
-            kind == ConfigTypeKind.ARRAY
-            or kind == ConfigTypeKind.NONEABLE
-            or kind == ConfigTypeKind.SCALAR_UNION
-            or kind == ConfigTypeKind.MAP
-        )
+        return kind in [
+            ConfigTypeKind.ARRAY,
+            ConfigTypeKind.NONEABLE,
+            ConfigTypeKind.SCALAR_UNION,
+            ConfigTypeKind.MAP,
+        ]
 
     @staticmethod
     def is_shape(kind: "ConfigTypeKind") -> bool:
         check.inst_param(kind, "kind", ConfigTypeKind)
-        return kind == ConfigTypeKind.STRICT_SHAPE or kind == ConfigTypeKind.PERMISSIVE_SHAPE
+        return kind in [ConfigTypeKind.STRICT_SHAPE, ConfigTypeKind.PERMISSIVE_SHAPE]
 
     @staticmethod
     def is_selector(kind: "ConfigTypeKind") -> bool:
@@ -387,8 +387,11 @@ class ScalarUnion(ConfigType):
 
         # https://github.com/dagster-io/dagster/issues/2133
         key = check.opt_str_param(
-            _key, "_key", "ScalarUnion.{}-{}".format(self.scalar_type.key, self.non_scalar_type.key)
+            _key,
+            "_key",
+            f"ScalarUnion.{self.scalar_type.key}-{self.non_scalar_type.key}",
         )
+
 
         super(ScalarUnion, self).__init__(
             key=key,
@@ -425,5 +428,5 @@ ALL_CONFIG_BUILTINS = set(_CONFIG_MAP.values())
 
 def get_builtin_scalar_by_name(type_name: str):
     if type_name not in _CONFIG_MAP_BY_NAME:
-        check.failed("Scalar {} is not supported".format(type_name))
+        check.failed(f"Scalar {type_name} is not supported")
     return _CONFIG_MAP_BY_NAME[type_name]

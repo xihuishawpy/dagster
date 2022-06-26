@@ -21,9 +21,12 @@ def scaffold_pipeline_config(
             continue
 
         # unfortunately we have to treat this special for now
-        if env_field_name == "context":
-            if skip_non_required and not env_config_type.fields["context"].is_required:  # type: ignore
-                continue
+        if (
+            env_field_name == "context"
+            and skip_non_required
+            and not env_config_type.fields["context"].is_required
+        ):
+            continue
 
         env_dict[env_field_name] = scaffold_type(env_field.config_type, skip_non_required)
 
@@ -37,13 +40,12 @@ def scaffold_type(config_type: ConfigType, skip_non_required: bool = True):
     # Right now selectors and composites have the same
     # scaffolding logic, which might not be wise.
     if ConfigTypeKind.has_fields(config_type.kind):
-        default_dict = {}
-        for field_name, field in config_type.fields.items():  # type: ignore
-            if skip_non_required and not field.is_required:
-                continue
+        return {
+            field_name: scaffold_type(field.config_type, skip_non_required)
+            for field_name, field in config_type.fields.items()
+            if not skip_non_required or field.is_required
+        }
 
-            default_dict[field_name] = scaffold_type(field.config_type, skip_non_required)
-        return default_dict
     elif config_type.kind == ConfigTypeKind.ANY:
         return "AnyType"
     elif config_type.kind == ConfigTypeKind.SCALAR:

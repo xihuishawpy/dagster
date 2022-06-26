@@ -226,10 +226,12 @@ def _launch_executor_run(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
@@ -276,10 +278,12 @@ def test_k8s_run_launcher_image_from_origin(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
@@ -317,8 +321,10 @@ def test_k8s_run_launcher_terminate(
     )
 
     wait_for_job(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
+
     timeout = datetime.timedelta(0, 30)
     start_time = datetime.datetime.now()
     while True:
@@ -386,10 +392,12 @@ def test_k8s_executor_resource_requirements(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
@@ -427,10 +435,12 @@ def test_execute_on_k8s_retry_pipeline(  # pylint: disable=redefined-outer-name
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     stats = dagster_instance_for_k8s_run_launcher.get_run_stats(run_id)
     assert stats.steps_succeeded == 1
@@ -496,11 +506,12 @@ def test_memoization_k8s_executor(
             )
 
             result = wait_for_job_and_get_raw_logs(
-                job_name="dagster-run-%s" % run_id,
+                job_name=f"dagster-run-{run_id}",
                 namespace=user_code_namespace_for_k8s_run_launcher,
             )
 
-            assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+            assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
             run_ids.append(run_id)
 

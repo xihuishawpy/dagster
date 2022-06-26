@@ -24,7 +24,7 @@ class ConfigurableDefinition(ABC):
 
     @property
     def config_field(self) -> Optional[Field]:
-        return None if not self.config_schema else self.config_schema.as_field()
+        return self.config_schema.as_field() if self.config_schema else None
 
     # getter for typed access
     def get_config_field(self) -> Field:

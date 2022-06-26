@@ -195,11 +195,10 @@ def _load_target_from_module(module: ModuleType, fn_name: str, error_suffix: str
         # LOAD_ALL_ASSETS is a special symbol that's returned when, instead of loading a particular
         # attribute, we should load all the assets in the module.
         return AssetGroup.from_modules([module])
-    else:
-        if not hasattr(module, fn_name):
-            raise DagsterInvariantViolationError(f"{fn_name} not found {error_suffix}")
+    if not hasattr(module, fn_name):
+        raise DagsterInvariantViolationError(f"{fn_name} not found {error_suffix}")
 
-        return getattr(module, fn_name)
+    return getattr(module, fn_name)
 
 
 @whitelist_for_serdes
@@ -315,7 +314,7 @@ class CustomPointer(
         reconstructor = cast(Callable, self.reconstructor_pointer.load_target())
 
         return reconstructor(
-            *self.reconstructable_args, **{key: value for key, value in self.reconstructable_kwargs}
+            *self.reconstructable_args, **dict(self.reconstructable_kwargs)
         )
 
     def describe(self) -> str:

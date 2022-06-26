@@ -90,18 +90,20 @@ class AssetKey(NamedTuple("_AssetKey", [("path", List[str])])):
         return super(AssetKey, cls).__new__(cls, path=path)
 
     def __str__(self):
-        return "AssetKey({})".format(self.path)
+        return f"AssetKey({self.path})"
 
     def __repr__(self):
-        return "AssetKey({})".format(self.path)
+        return f"AssetKey({self.path})"
 
     def __hash__(self):
         return hash(tuple(self.path))
 
     def __eq__(self, other):
-        if not isinstance(other, AssetKey):
-            return False
-        return self.to_string() == other.to_string()
+        return (
+            self.to_string() == other.to_string()
+            if isinstance(other, AssetKey)
+            else False
+        )
 
     def to_string(self, legacy: Optional[bool] = False) -> Optional[str]:
         """

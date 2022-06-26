@@ -77,65 +77,63 @@ class HookDefinition(
             # when it decorates a pipeline, we apply this hook to all the solid invocations within
             # the pipeline.
             return args[0].with_hooks({self})
-        else:
-            if not self.decorated_fn:
-                raise DagsterInvalidInvocationError(
-                    "Only hook definitions created using one of the hook decorators can be invoked."
-                )
-            fxn_args = get_function_params(self.decorated_fn)
+        if not self.decorated_fn:
+            raise DagsterInvalidInvocationError(
+                "Only hook definitions created using one of the hook decorators can be invoked."
+            )
+        fxn_args = get_function_params(self.decorated_fn)
+        context_arg_name = fxn_args[0].name
             # If decorated fxn has two arguments, then this is an event list hook fxn, and parameter
             # names are always context and event_list
-            if len(fxn_args) == 2:
-                context_arg_name = fxn_args[0].name
-                event_list_arg_name = fxn_args[1].name
-                if len(args) + len(kwargs) != 2:
-                    raise DagsterInvalidInvocationError(
-                        "Decorated function expects two parameters, context and event_list, but "
-                        f"{len(args) + len(kwargs)} were provided."
-                    )
-                if args:
-                    context = check.opt_inst_param(args[0], "context", HookContext)
-                    event_list = check.opt_list_param(
-                        args[1] if len(args) > 1 else kwargs[event_list_arg_name],
-                        event_list_arg_name,
-                    )
-                else:
-                    if context_arg_name not in kwargs:
-                        raise DagsterInvalidInvocationError(
-                            f"Could not find expected argument '{context_arg_name}'. Provided "
-                            f"kwargs: {list(kwargs.keys())}"
-                        )
-                    if event_list_arg_name not in kwargs:
-                        raise DagsterInvalidInvocationError(
-                            f"Could not find expected argument '{event_list_arg_name}'. Provided "
-                            f"kwargs: {list(kwargs.keys())}"
-                        )
-                    context = check.opt_inst_param(
-                        kwargs[context_arg_name], context_arg_name, HookContext
-                    )
-                    event_list = check.opt_list_param(
-                        kwargs[event_list_arg_name], event_list_arg_name
-                    )
-                return hook_invocation_result(self, context, event_list)
+        if len(fxn_args) == 2:
+            event_list_arg_name = fxn_args[1].name
+            if len(args) + len(kwargs) != 2:
+                raise DagsterInvalidInvocationError(
+                    "Decorated function expects two parameters, context and event_list, but "
+                    f"{len(args) + len(kwargs)} were provided."
+                )
+            if args:
+                context = check.opt_inst_param(args[0], "context", HookContext)
+                event_list = check.opt_list_param(
+                    args[1] if len(args) > 1 else kwargs[event_list_arg_name],
+                    event_list_arg_name,
+                )
             else:
-                context_arg_name = fxn_args[0].name
-                if len(args) + len(kwargs) != 1:
+                if context_arg_name not in kwargs:
                     raise DagsterInvalidInvocationError(
-                        f"Decorated function expects one parameter, {context_arg_name}, but "
-                        f"{len(args) + len(kwargs)} were provided."
+                        f"Could not find expected argument '{context_arg_name}'. Provided "
+                        f"kwargs: {list(kwargs.keys())}"
                     )
-                if args:
-                    context = check.opt_inst_param(args[0], context_arg_name, HookContext)
-                else:
-                    if context_arg_name not in kwargs:
-                        raise DagsterInvalidInvocationError(
-                            f"Could not find expected argument '{context_arg_name}'. Provided "
-                            f"kwargs: {list(kwargs.keys())}"
-                        )
-                    context = check.opt_inst_param(
-                        kwargs[context_arg_name], context_arg_name, HookContext
+                if event_list_arg_name not in kwargs:
+                    raise DagsterInvalidInvocationError(
+                        f"Could not find expected argument '{event_list_arg_name}'. Provided "
+                        f"kwargs: {list(kwargs.keys())}"
                     )
-                return hook_invocation_result(self, context)
+                context = check.opt_inst_param(
+                    kwargs[context_arg_name], context_arg_name, HookContext
+                )
+                event_list = check.opt_list_param(
+                    kwargs[event_list_arg_name], event_list_arg_name
+                )
+            return hook_invocation_result(self, context, event_list)
+        else:
+            if len(args) + len(kwargs) != 1:
+                raise DagsterInvalidInvocationError(
+                    f"Decorated function expects one parameter, {context_arg_name}, but "
+                    f"{len(args) + len(kwargs)} were provided."
+                )
+            if args:
+                context = check.opt_inst_param(args[0], context_arg_name, HookContext)
+            elif context_arg_name in kwargs:
+                context = check.opt_inst_param(
+                    kwargs[context_arg_name], context_arg_name, HookContext
+                )
+            else:
+                raise DagsterInvalidInvocationError(
+                    f"Could not find expected argument '{context_arg_name}'. Provided "
+                    f"kwargs: {list(kwargs.keys())}"
+                )
+            return hook_invocation_result(self, context)
 
     def get_resource_requirements(
         self, outer_context: Optional[object] = None

@@ -45,8 +45,7 @@ from dagster import schedule
 @schedule(cron_schedule="0 0 * * *", job=continent_job)
 def continent_schedule():
     for c in CONTINENTS:
-        request = continent_job.run_request_for_partition(partition_key=c, run_key=c)
-        yield request
+        yield continent_job.run_request_for_partition(partition_key=c, run_key=c)
 
 
 # end_static_partition
@@ -56,10 +55,9 @@ def continent_schedule():
 
 @schedule(cron_schedule="0 0 * * *", job=continent_job)
 def antarctica_schedule():
-    request = continent_job.run_request_for_partition(
+    yield continent_job.run_request_for_partition(
         partition_key="Antarctica", run_key=None
     )
-    yield request
 
 
 # end_single_partition

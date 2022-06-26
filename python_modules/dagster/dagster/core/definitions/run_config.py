@@ -88,11 +88,7 @@ def define_logger_dictionary_cls(creation_data: RunConfigSchemaCreationData) -> 
 
 
 def define_execution_field(executor_defs: List[ExecutorDefinition]) -> Field:
-    default_in_process = False
-    for executor_def in executor_defs:
-        if executor_def == in_process_executor:  # pylint: disable=comparison-with-callable
-            default_in_process = True
-
+    default_in_process = in_process_executor in executor_defs
     selector = selector_for_named_defs(executor_defs)
 
     if default_in_process:
@@ -115,10 +111,15 @@ def define_single_execution_field(executor_def: ExecutorDefinition) -> Field:
 
 def define_run_config_schema_type(creation_data: RunConfigSchemaCreationData) -> ConfigType:
     execution_field = (
-        define_execution_field(creation_data.mode_definition.executor_defs)
-        if not creation_data.is_using_graph_job_op_apis
-        else define_single_execution_field(creation_data.mode_definition.executor_defs[0])
+        define_single_execution_field(
+            creation_data.mode_definition.executor_defs[0]
+        )
+        if creation_data.is_using_graph_job_op_apis
+        else define_execution_field(
+            creation_data.mode_definition.executor_defs
+        )
     )
+
 
     top_level_node = Node(
         name=creation_data.graph_def.name,
@@ -212,16 +213,15 @@ def get_inputs_field(
 
     if not inputs_field_fields:
         return None
-    if solid_ignored:
-        node_type = "op" if is_using_graph_job_op_apis else "solid"
-        return Field(
-            Shape(inputs_field_fields),
-            is_required=False,
-            description=f"This {node_type} is not present in the current {node_type} selection, "
-            "the input config values are allowed but ignored.",
-        )
-    else:
+    if not solid_ignored:
         return Field(Shape(inputs_field_fields))
+    node_type = "op" if is_using_graph_job_op_apis else "solid"
+    return Field(
+        Shape(inputs_field_fields),
+        is_required=False,
+        description=f"This {node_type} is not present in the current {node_type} selection, "
+        "the input config values are allowed but ignored.",
+    )
 
 
 def input_has_upstream(
@@ -253,8 +253,7 @@ def get_input_manager_input_field(
             "IInputManagerDefinition"
         )
 
-    input_config_schema = root_manager.input_config_schema
-    if input_config_schema:
+    if input_config_schema := root_manager.input_config_schema:
         return input_config_schema.as_field()
 
     return None
@@ -278,10 +277,9 @@ def get_outputs_field(
     # materializers
     output_manager_fields = {}
     for name, output_def in solid.definition.output_dict.items():
-        output_manager_output_field = get_output_manager_output_field(
+        if output_manager_output_field := get_output_manager_output_field(
             solid, output_def, resource_defs
-        )
-        if output_manager_output_field:
+        ):
             output_manager_fields[name] = output_manager_output_field
 
     if output_manager_fields:
@@ -290,8 +288,7 @@ def get_outputs_field(
     # otherwise, use any type materializers for the schema
     type_materializer_fields = {}
     for name, output_def in solid.definition.output_dict.items():
-        type_output_field = get_type_output_field(output_def)
-        if type_output_field:
+        if type_output_field := get_type_output_field(output_def):
             type_materializer_fields[name] = type_output_field
 
     if type_materializer_fields:
@@ -336,21 +333,18 @@ def get_type_output_field(output_def: OutputDefinition) -> Optional[Field]:
 def solid_config_field(
     fields: Dict[str, Optional[Field]], ignored: bool, is_using_graph_job_op_apis: bool
 ) -> Optional[Field]:
-    field_aliases = {"ops": "solids"} if is_using_graph_job_op_apis else {"solids": "ops"}
-    trimmed_fields = remove_none_entries(fields)
-    if trimmed_fields:
-        if ignored:
-            node_type = "op" if is_using_graph_job_op_apis else "solid"
-            return Field(
-                Shape(trimmed_fields, field_aliases=field_aliases),
-                is_required=False,
-                description=f"This {node_type} is not present in the current {node_type} selection, "
-                "the config values are allowed but ignored.",
-            )
-        else:
-            return Field(Shape(trimmed_fields, field_aliases=field_aliases))
-    else:
+    if not (trimmed_fields := remove_none_entries(fields)):
         return None
+    field_aliases = {"ops": "solids"} if is_using_graph_job_op_apis else {"solids": "ops"}
+    if not ignored:
+        return Field(Shape(trimmed_fields, field_aliases=field_aliases))
+    node_type = "op" if is_using_graph_job_op_apis else "solid"
+    return Field(
+        Shape(trimmed_fields, field_aliases=field_aliases),
+        is_required=False,
+        description=f"This {node_type} is not present in the current {node_type} selection, "
+        "the config values are allowed but ignored.",
+    )
 
 
 def construct_leaf_solid_config(
@@ -430,40 +424,37 @@ def define_isolid_field(
             is_using_graph_job_op_apis,
             asset_layer,
         )
-        # This case omits a 'solids' key, thus if a composite solid is `configured` or has a field
-        # mapping, the user cannot stub any config, inputs, or outputs for inner (child) solids.
+    fields = {
+        "inputs": get_inputs_field(
+            solid,
+            handle,
+            dependency_structure,
+            resource_defs,
+            ignored,
+            asset_layer,
+            is_using_graph_job_op_apis,
+        ),
+        "outputs": get_outputs_field(solid, resource_defs),
+    }
+    nodes_field = Field(
+        define_solid_dictionary_cls(
+            solids=graph_def.solids,
+            ignored_solids=None,
+            dependency_structure=graph_def.dependency_structure,
+            parent_handle=handle,
+            resource_defs=resource_defs,
+            is_using_graph_job_op_apis=is_using_graph_job_op_apis,
+            asset_layer=asset_layer,
+        )
+    )
+    if is_using_graph_job_op_apis:
+        fields["ops"] = nodes_field
     else:
-        fields = {
-            "inputs": get_inputs_field(
-                solid,
-                handle,
-                dependency_structure,
-                resource_defs,
-                ignored,
-                asset_layer,
-                is_using_graph_job_op_apis,
-            ),
-            "outputs": get_outputs_field(solid, resource_defs),
-        }
-        nodes_field = Field(
-            define_solid_dictionary_cls(
-                solids=graph_def.solids,
-                ignored_solids=None,
-                dependency_structure=graph_def.dependency_structure,
-                parent_handle=handle,
-                resource_defs=resource_defs,
-                is_using_graph_job_op_apis=is_using_graph_job_op_apis,
-                asset_layer=asset_layer,
-            )
-        )
-        if is_using_graph_job_op_apis:
-            fields["ops"] = nodes_field
-        else:
-            fields["solids"] = nodes_field
+        fields["solids"] = nodes_field
 
-        return solid_config_field(
-            fields, ignored=ignored, is_using_graph_job_op_apis=is_using_graph_job_op_apis
-        )
+    return solid_config_field(
+        fields, ignored=ignored, is_using_graph_job_op_apis=is_using_graph_job_op_apis
+    )
 
 
 def define_solid_dictionary_cls(
@@ -479,7 +470,7 @@ def define_solid_dictionary_cls(
 
     fields = {}
     for solid in solids:
-        solid_field = define_isolid_field(
+        if solid_field := define_isolid_field(
             solid,
             NodeHandle(solid.name, parent_handle),
             dependency_structure,
@@ -487,13 +478,11 @@ def define_solid_dictionary_cls(
             ignored=False,
             is_using_graph_job_op_apis=is_using_graph_job_op_apis,
             asset_layer=asset_layer,
-        )
-
-        if solid_field:
+        ):
             fields[solid.name] = solid_field
 
     for solid in ignored_solids:
-        solid_field = define_isolid_field(
+        if solid_field := define_isolid_field(
             solid,
             NodeHandle(solid.name, parent_handle),
             dependency_structure,
@@ -501,8 +490,7 @@ def define_solid_dictionary_cls(
             ignored=True,
             is_using_graph_job_op_apis=is_using_graph_job_op_apis,
             asset_layer=asset_layer,
-        )
-        if solid_field:
+        ):
             fields[solid.name] = solid_field
 
     field_aliases = {"ops": "solids"} if is_using_graph_job_op_apis else {"solids": "ops"}

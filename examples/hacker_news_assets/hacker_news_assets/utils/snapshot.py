@@ -19,9 +19,6 @@ if __name__ == "__main__":
     with ThreadPoolExecutor() as executor:
         results = list(tqdm(executor.map(client.fetch_item_by_id, ids), total=len(ids)))
 
-    items = {}
-    for x in results:
-        items[int(x["id"])] = x
-
+    items = {int(x["id"]): x for x in results}
     with gzip.open(file_relative_path(__file__, "../snapshot.gzip"), "w") as f:
         f.write(json.dumps(items).encode())

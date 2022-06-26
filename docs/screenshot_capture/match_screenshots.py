@@ -21,8 +21,7 @@ def match_screenshots():
             screenshot_path
         ), f"Screenshot spec expects a file to exist at {screenshot_path}"
 
-        defs_file = screenshot_spec.get("defs_file")
-        if defs_file:
+        if defs_file := screenshot_spec.get("defs_file"):
             assert os.path.exists(
                 defs_file
             ), f"Screenshot spec expects a file to exist at {defs_file}"

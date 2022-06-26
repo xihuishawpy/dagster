@@ -11,4 +11,4 @@ def not_much():
 @job(executor_def=celery_executor)
 def parallel_job():
     for i in range(50):
-        not_much.alias("not_much_" + str(i))()
+        not_much.alias(f"not_much_{str(i)}")()

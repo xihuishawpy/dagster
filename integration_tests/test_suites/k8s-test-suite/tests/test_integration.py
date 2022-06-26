@@ -45,10 +45,12 @@ def test_k8s_run_launcher_default(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
@@ -106,11 +108,12 @@ def test_k8s_run_launcher_with_celery_executor_fails(
         ), "Timed out waiting for pipeline failure"
         event_records = dagster_instance_for_k8s_run_launcher.all_logs(run_id)
 
-        found_pipeline_failure = False
-        for event_record in event_records:
-            if event_record.dagster_event:
-                if event_record.dagster_event.event_type == DagsterEventType.PIPELINE_FAILURE:
-                    found_pipeline_failure = True
+        found_pipeline_failure = any(
+            event_record.dagster_event
+            and event_record.dagster_event.event_type
+            == DagsterEventType.PIPELINE_FAILURE
+            for event_record in event_records
+        )
 
         if found_pipeline_failure:
             break
@@ -138,14 +141,16 @@ def test_failing_k8s_run_launcher(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" not in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" not in result, f"no match, result: {result}"
 
     event_records = dagster_instance_for_k8s_run_launcher.all_logs(run_id)
 
-    assert any(["Op Exception Message" in str(event) for event in event_records])
+    assert any("Op Exception Message" in str(event) for event in event_records)
 
 
 @pytest.mark.integration
@@ -165,8 +170,10 @@ def test_k8s_run_launcher_terminate(
     )
 
     wait_for_job(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
+
 
     timeout = datetime.timedelta(0, 30)
     start_time = datetime.datetime.now()
@@ -211,7 +218,9 @@ def test_k8s_run_launcher_secret_from_deployment(
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=user_code_namespace_for_k8s_run_launcher
+        job_name=f"dagster-run-{run_id}",
+        namespace=user_code_namespace_for_k8s_run_launcher,
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"

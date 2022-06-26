@@ -128,12 +128,13 @@ def _resolve_output_to_destinations(output_name, node_def, handle) -> Sequence[N
                 output_pointer.solid_name
             ).get(SolidOutputHandle(output_node, output_def), [])
         )
-        for input_handle in downstream_input_handles:
-            node_input_handles.append(
-                NodeInputHandle(
-                    NodeHandle(input_handle.solid_name, parent=handle), input_handle.input_name
-                )
+        node_input_handles.extend(
+            NodeInputHandle(
+                NodeHandle(input_handle.solid_name, parent=handle),
+                input_handle.input_name,
             )
+            for input_handle in downstream_input_handles
+        )
 
     return node_input_handles
 
@@ -310,10 +311,10 @@ def _asset_key_to_dep_node_handles(
                     if node not in dep_asset_key_node_handles
                 ]
 
-    dep_node_set_by_asset_key: Dict[AssetKey, Set[NodeHandle]] = {}
-    for asset_key, dep_node_handles in dep_nodes_by_asset_key.items():
-        dep_node_set_by_asset_key[asset_key] = set(dep_node_handles)
-    return dep_node_set_by_asset_key
+    return {
+        asset_key: set(dep_node_handles)
+        for asset_key, dep_node_handles in dep_nodes_by_asset_key.items()
+    }
 
 
 def _asset_mappings_for_node(
@@ -343,15 +344,13 @@ def _asset_mappings_for_node(
         input_asset_keys: Set[AssetKey] = set()
 
         for input_def in node_def.input_defs:
-            input_key = input_def.hardcoded_asset_key
-            if input_key:
+            if input_key := input_def.hardcoded_asset_key:
                 input_asset_keys.add(input_key)
                 input_handle = NodeInputHandle(node_handle=node_handle, input_name=input_def.name)
                 asset_key_by_input[input_handle] = input_key
 
         for output_def in node_def.output_defs:
-            output_key = output_def.hardcoded_asset_key
-            if output_key:
+            if output_key := output_def.hardcoded_asset_key:
                 output_handle = NodeOutputHandle(node_handle, output_def.name)
                 asset_info_by_output[output_handle] = AssetOutputInfo(
                     key=output_key,
@@ -374,10 +373,10 @@ def _asset_mappings_for_node(
                 node_def=sub_node.definition,
                 node_handle=NodeHandle(sub_node_name, parent=node_handle),
             )
-            asset_key_by_input.update(n_asset_key_by_input)
-            asset_info_by_output.update(n_asset_info_by_output)
-            asset_deps.update(n_asset_deps)
-            io_manager_by_asset.update(n_io_manager_by_asset)
+            asset_key_by_input |= n_asset_key_by_input
+            asset_info_by_output |= n_asset_info_by_output
+            asset_deps |= n_asset_deps
+            io_manager_by_asset |= n_io_manager_by_asset
 
     return asset_key_by_input, asset_info_by_output, asset_deps, io_manager_by_asset
 
@@ -532,14 +531,13 @@ class AssetLayer:
                 )
                 io_manager_by_asset[asset_key] = inner_output_def.io_manager_key
 
-                asset_key_by_input.update(
-                    {
-                        input_handle: asset_key
-                        for input_handle in _resolve_output_to_destinations(
-                            output_name, assets_def.node_def, node_handle
-                        )
-                    }
-                )
+                asset_key_by_input |= {
+                    input_handle: asset_key
+                    for input_handle in _resolve_output_to_destinations(
+                        output_name, assets_def.node_def, node_handle
+                    )
+                }
+
 
         return AssetLayer(
             asset_keys_by_node_input_handle=asset_key_by_input,
@@ -548,7 +546,7 @@ class AssetLayer:
             dependency_node_handles_by_asset_key=_asset_key_to_dep_node_handles(
                 graph_def, assets_defs_by_node_handle
             ),
-            assets_defs=[assets_def for assets_def in assets_defs_by_node_handle.values()],
+            assets_defs=list(assets_defs_by_node_handle.values()),
             source_asset_defs=source_assets,
             io_manager_keys_by_asset_key=io_manager_by_asset,
         )
@@ -619,12 +617,11 @@ class AssetLayer:
             if key in assets_def.group_names_by_key
         }
 
-        group_names.update(
-            {
-                key: source_asset_def.group_name
-                for key, source_asset_def in self._source_assets_by_key.items()
-            }
-        )
+        group_names |= {
+            key: source_asset_def.group_name
+            for key, source_asset_def in self._source_assets_by_key.items()
+        }
+
 
         return group_names
 
@@ -633,10 +630,9 @@ class AssetLayer:
 
         if assets_def is not None:
             return assets_def.partitions_def
-        else:
-            source_asset = self._source_assets_by_key.get(asset_key)
-            if source_asset is not None:
-                return source_asset.partitions_def
+        source_asset = self._source_assets_by_key.get(asset_key)
+        if source_asset is not None:
+            return source_asset.partitions_def
 
         return None
 

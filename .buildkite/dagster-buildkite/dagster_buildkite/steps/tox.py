@@ -40,14 +40,9 @@ def build_tox_step(
 
     tox_command_parts = filter(
         None,
-        [
-            "tox",
-            "-vv",  # extra-verbose
-            "-c %s " % tox_file if tox_file else None,
-            "-e",
-            tox_env,
-        ],
+        ["tox", "-vv", f"-c {tox_file} " if tox_file else None, "-e", tox_env],
     )
+
     tox_command = " ".join(tox_command_parts)
     commands = [
         *(extra_commands_pre or []),
@@ -71,8 +66,7 @@ def build_tox_step(
 
 def _tox_env_to_label_suffix(tox_env: str) -> str:
     py_version, _, factor = tox_env.partition("-")
-    m = re.match(r"py(\d+)", py_version)
-    if m:
+    if m := re.match(r"py(\d+)", py_version):
         version_number = m[1]
         number_str = f"{version_number[0]}.{version_number[1:]}"
         return f" {factor} {number_str}"
@@ -82,8 +76,9 @@ def _tox_env_to_label_suffix(tox_env: str) -> str:
 
 def _resolve_python_version(tox_env: str) -> AvailablePythonVersion:
     factors = tox_env.split("-")
-    py_version_factor = next((f for f in factors if re.match(r"py\d+", f)), None)
-    if py_version_factor:
+    if py_version_factor := next(
+        (f for f in factors if re.match(r"py\d+", f)), None
+    ):
         major, minor = int(py_version_factor[2]), int(py_version_factor[3:])
         return AvailablePythonVersion.from_major_minor(major, minor)
     else:

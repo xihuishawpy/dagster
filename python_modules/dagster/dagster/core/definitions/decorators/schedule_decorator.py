@@ -138,14 +138,10 @@ def schedule(
                         return
 
             with user_code_error_boundary(
-                ScheduleExecutionError,
-                lambda: f"Error occurred during the evaluation of schedule {schedule_name}",
-            ):
-                if is_context_provided(fn):
-                    result = fn(context)
-                else:
-                    result = fn()  # type: ignore
-
+                    ScheduleExecutionError,
+                    lambda: f"Error occurred during the evaluation of schedule {schedule_name}",
+                ):
+                result = fn(context) if is_context_provided(fn) else fn()
                 if isinstance(result, dict):
                     # this is the run-config based decorated function, wrap the evaluated run config
                     # and tags in a RunRequest
@@ -326,14 +322,15 @@ def my_schedule_definition(_):
         )
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,  # type: ignore[arg-type]
+            name=f"{schedule_name}_partitions",
+            pipeline_name=pipeline_name,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partitions_def=partitions_def,
         )
+
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
@@ -482,14 +479,15 @@ def my_schedule_definition(_):
         )
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,  # type: ignore[arg-type]
+            name=f"{schedule_name}_partitions",
+            pipeline_name=pipeline_name,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partitions_def=partitions_def,
         )
+
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
@@ -626,14 +624,15 @@ def my_schedule_definition(_):
         )
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,  # type: ignore[arg-type]
+            name=f"{schedule_name}_partitions",
+            pipeline_name=pipeline_name,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partitions_def=partitions_def,
         )
+
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
@@ -785,14 +784,15 @@ def my_schedule_definition(_):
         )
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,  # type: ignore[arg-type]
+            name=f"{schedule_name}_partitions",
+            pipeline_name=pipeline_name,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partitions_def=partitions_def,
         )
+
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,

@@ -30,7 +30,7 @@ def type_repr(config_type: ConfigType) -> str:
     elif config_type.kind == ConfigTypeKind.ENUM:
         return "Enum{" + ", ".join(str(val) for val in config_type.config_values) + "}"
     elif config_type.kind == ConfigTypeKind.ARRAY:
-        return "List[{}]".format(type_repr(config_type.inner_type))
+        return f"List[{type_repr(config_type.inner_type)}]"
     elif config_type.kind == ConfigTypeKind.SELECTOR:
         return "selector"
     elif config_type.kind == ConfigTypeKind.STRICT_SHAPE:
@@ -58,25 +58,30 @@ def config_field_to_lines(field, name=None) -> List[str]:
         if field.description:
             # trim / normalize whitespace. some of our config descriptions misuse triple-quote blocks
             # so this makes them look nicer
-            for l in field.description.split("\n"):
-                # escape '*' characters because they get interpreted as emphasis markers in rst
-                lines.append(" " * 4 + textwrap.dedent(l.replace("*", "\\*")))
+            lines.extend(
+                " " * 4 + textwrap.dedent(l.replace("*", "\\*"))
+                for l in field.description.split("\n")
+            )
+
             lines.append("")
 
         if field.default_provided:
             val = field.default_value
+            lines.append("")
             # for fields with dictionary default vals, hide them in collapsible block
             if isinstance(val, dict):
                 ls = json.dumps(val, indent=4).split("\n")
-                lines.append("")
-                lines.append("    .. collapse:: Default Value:")
-                lines.append("")
-                lines.append("        .. code-block:: javascript")
-                lines.append("")
-                for l in ls:
-                    lines.append(" " * 12 + l)
+                lines.extend(
+                    (
+                        "    .. collapse:: Default Value:",
+                        "",
+                        "        .. code-block:: javascript",
+                        "",
+                    )
+                )
+
+                lines.extend(" " * 12 + l for l in ls)
             else:
-                lines.append("")
                 lines.append(f"    **Default Value:** {repr(val)}")
 
     # if field has subfields, recurse
@@ -84,10 +89,14 @@ def config_field_to_lines(field, name=None) -> List[str]:
         lines.append("")
         # for the top level, no need to indent
         indent = "    " if name else ""
-        lines.append(indent + ".. collapse:: Config Schema:")
+        lines.append(f"{indent}.. collapse:: Config Schema:")
         for name, subfield in field.config_type.fields.items():
             # indent all of these lines to fit under the collapse block
-            lines += [indent + "    " + line for line in config_field_to_lines(subfield, name=name)]
+            lines += [
+                f"{indent}    {line}"
+                for line in config_field_to_lines(subfield, name=name)
+            ]
+
 
     return lines
 
@@ -98,7 +107,7 @@ class ConfigurableDocumenter(DataDocumenter):
 
     @classmethod
     def can_document_member(cls, member: Any, _membername: str, _isattr: bool, _parent: Any) -> bool:
-        return isinstance(member, ConfigurableDefinition) or isinstance(member, ConfigurableClass)
+        return isinstance(member, (ConfigurableDefinition, ConfigurableClass))
 
     def add_content(self, more_content, no_docstring: bool = False) -> None:
         source_name = self.get_sourcename()

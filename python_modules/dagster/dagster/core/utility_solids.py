@@ -13,8 +13,7 @@ def _compute_fn(context, inputs):
                 seen.add(key)
                 passed_rows.append(item)
 
-    result = []
-    result.extend(passed_rows)
+    result = list(passed_rows)
     result.append({context.solid.name: "compute_called"})
     yield Output(result)
 
@@ -30,7 +29,7 @@ def define_stub_solid(name, value):
 
 
 def create_root_solid(name):
-    input_name = name + "_input"
+    input_name = f"{name}_input"
     inp = InputDefinition(input_name)
 
     return SolidDefinition(

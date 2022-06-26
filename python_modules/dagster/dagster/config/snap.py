@@ -125,10 +125,10 @@ class ConfigTypeSnap(
         """For container types such as Array or Noneable, the contained type. For a Map, the value type."""
         # valid for Noneable, Map, and Array
         check.invariant(
-            self.kind == ConfigTypeKind.NONEABLE
-            or self.kind == ConfigTypeKind.ARRAY
-            or self.kind == ConfigTypeKind.MAP
+            self.kind
+            in [ConfigTypeKind.NONEABLE, ConfigTypeKind.ARRAY, ConfigTypeKind.MAP]
         )
+
 
         type_param_keys = check.is_list(self.type_param_keys, of_type=str)
         if self.kind == ConfigTypeKind.MAP:
@@ -155,11 +155,7 @@ class ConfigTypeSnap(
         check.str_param(name, "name")
         check.invariant(ConfigTypeKind.has_fields(self.kind))
         fields = check.is_list(self.fields, of_type=ConfigFieldSnap)
-        for f in fields:
-            if f.name == name:
-                return f
-
-        return None
+        return next((f for f in fields if f.name == name), None)
 
     def get_field(self, name: str) -> "ConfigFieldSnap":
         field = self._get_field(name)
@@ -188,10 +184,10 @@ class ConfigTypeSnap(
 
     def has_enum_value(self, value: object) -> bool:
         check.invariant(self.kind == ConfigTypeKind.ENUM)
-        for enum_value in cast(List[ConfigEnumValueSnap], self.enum_values):
-            if enum_value.value == value:
-                return True
-        return False
+        return any(
+            enum_value.value == value
+            for enum_value in cast(List[ConfigEnumValueSnap], self.enum_values)
+        )
 
 
 @whitelist_for_serdes

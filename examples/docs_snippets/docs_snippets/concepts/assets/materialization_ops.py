@@ -25,8 +25,7 @@ from dagster import op
 @op
 def my_simple_op():
     df = read_df()
-    remote_storage_path = persist_to_storage(df)
-    return remote_storage_path
+    return persist_to_storage(df)
 
 
 # end_materialization_ops_marker_0

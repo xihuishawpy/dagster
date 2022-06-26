@@ -146,9 +146,10 @@ class Resolver:
                 [_match_groups(assets_def, set(node.children)) for assets_def in self.assets_defs],
             )
         elif isinstance(node, KeysAssetSelection):
-            specified_keys = set([child.to_user_string() for child in node.children])
-            invalid_keys = specified_keys - set(self.all_assets_by_name.keys())
-            if invalid_keys:
+            specified_keys = {child.to_user_string() for child in node.children}
+            if invalid_keys := specified_keys - set(
+                self.all_assets_by_name.keys()
+            ):
                 raise DagsterInvalidSubsetError(
                     f"AssetKey(s) {invalid_keys} were selected, but no AssetDefinition objects supply "
                     "these keys. Make sure all keys are spelled correctly, and all AssetsDefinitions "

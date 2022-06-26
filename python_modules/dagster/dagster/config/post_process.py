@@ -36,12 +36,11 @@ def _recursively_process_config(
 ) -> EvaluateValueResult:
     evr = _recursively_resolve_defaults(context, config_value)
 
-    if evr.success:
-        if not context.do_post_process:
-            return evr
-        return _post_process(context, evr.value)
-    else:
+    if not evr.success:
         return evr
+    if not context.do_post_process:
+        return evr
+    return _post_process(context, evr.value)
 
 
 def _recursively_resolve_defaults(
@@ -88,7 +87,7 @@ def _post_process(context: TraversalContext, config_value: Any) -> EvaluateValue
 def _recurse_in_to_scalar_union(
     context: TraversalContext, config_value: Any
 ) -> EvaluateValueResult:
-    if isinstance(config_value, dict) or isinstance(config_value, list):
+    if isinstance(config_value, (dict, list)):
         return _recursively_process_config(
             context.for_new_config_type(context.config_type.non_scalar_type), config_value  # type: ignore
         )
@@ -173,9 +172,7 @@ def _recurse_in_to_shape(
     errors = []
     for result in processed_fields.values():
         if not result.success:
-            for error in cast(List[EvaluationError], result.errors):
-                errors.append(error)
-
+            errors.extend(iter(cast(List[EvaluationError], result.errors)))
     if errors:
         return EvaluateValueResult.for_errors(errors)
 
@@ -190,9 +187,10 @@ def _recurse_in_to_array(context: TraversalContext, config_value: Any) -> Evalua
     if not config_value:
         return EvaluateValueResult.for_value([])
 
-    if context.config_type.inner_type.kind != ConfigTypeKind.NONEABLE:  # type: ignore
-        if any((cv is None for cv in config_value)):
-            check.failed("Null array member not caught in validation")
+    if context.config_type.inner_type.kind != ConfigTypeKind.NONEABLE and any(
+        (cv is None for cv in config_value)
+    ):
+        check.failed("Null array member not caught in validation")
 
     results = [
         _recursively_process_config(context.for_array(idx), item)
@@ -223,9 +221,10 @@ def _recurse_in_to_map(context: TraversalContext, config_value: Any) -> Evaluate
 
     if any((ck is None for ck in config_value.keys())):
         check.failed("Null map key not caught in validation")
-    if context.config_type.inner_type.kind != ConfigTypeKind.NONEABLE:  # type: ignore
-        if any((cv is None for cv in config_value.values())):
-            check.failed("Null map member not caught in validation")
+    if context.config_type.inner_type.kind != ConfigTypeKind.NONEABLE and any(
+        (cv is None for cv in config_value.values())
+    ):
+        check.failed("Null map member not caught in validation")
 
     results = {
         key: _recursively_process_config(context.for_map(key), item)

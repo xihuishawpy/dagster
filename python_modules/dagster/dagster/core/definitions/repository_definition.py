@@ -121,8 +121,7 @@ class _CacheingDefinitionIndex(Generic[RepositoryLevelDefinition]):
 
         lazy_names = []
         for definition in self._get_lazy_definitions():
-            strict_definition = self._definitions.get(definition.name)
-            if strict_definition:
+            if strict_definition := self._definitions.get(definition.name):
                 check.invariant(
                     strict_definition == definition,
                     f"Duplicate definition found for {definition.name}",
@@ -516,9 +515,7 @@ class CachingRepositoryData(RepositoryData):
             job_partition_sets = []
             for pipeline in self.get_all_pipelines():
                 if isinstance(pipeline, JobDefinition):
-                    job_partition_set = pipeline.get_partition_set_def()
-
-                    if job_partition_set:
+                    if job_partition_set := pipeline.get_partition_set_def():
                         # should only return a partition set if this was constructed using the job
                         # API, with a partitioned config
                         job_partition_sets.append(job_partition_set)
@@ -569,29 +566,34 @@ class CachingRepositoryData(RepositoryData):
         """
         check.dict_param(repository_definitions, "repository_definitions", key_type=str)
         check.invariant(
-            set(repository_definitions.keys()).issubset(VALID_REPOSITORY_DATA_DICT_KEYS),
+            set(repository_definitions.keys()).issubset(
+                VALID_REPOSITORY_DATA_DICT_KEYS
+            ),
             "Bad dict: must not contain keys other than {{{valid_keys}}}: found {bad_keys}.".format(
                 valid_keys=", ".join(
-                    ["'{key}'".format(key=key) for key in VALID_REPOSITORY_DATA_DICT_KEYS]
+                    [
+                        "'{key}'".format(key=key)
+                        for key in VALID_REPOSITORY_DATA_DICT_KEYS
+                    ]
                 ),
                 bad_keys=", ".join(
                     [
                         "'{key}'"
-                        for key in repository_definitions.keys()
+                        for key in repository_definitions
                         if key not in VALID_REPOSITORY_DATA_DICT_KEYS
                     ]
                 ),
             ),
         )
 
+
         for key in VALID_REPOSITORY_DATA_DICT_KEYS:
             if key not in repository_definitions:
                 repository_definitions[key] = {}
 
-        duplicate_keys = set(repository_definitions["schedules"].keys()).intersection(
-            set(repository_definitions["sensors"].keys())
-        )
-        if duplicate_keys:
+        if duplicate_keys := set(
+            repository_definitions["schedules"].keys()
+        ).intersection(set(repository_definitions["sensors"].keys())):
             raise DagsterInvalidDefinitionError(
                 f"Duplicate definitions between schedules and sensors found for keys: {', '.join(duplicate_keys)}"
             )

@@ -277,28 +277,27 @@ def solid(
 
     """
     # This case is for when decorator is used bare, without arguments. e.g. @solid versus @solid()
-    if callable(name):
-        check.invariant(input_defs is None)
-        check.invariant(output_defs is None)
-        check.invariant(description is None)
-        check.invariant(config_schema is None)
-        check.invariant(required_resource_keys is None)
-        check.invariant(tags is None)
-        check.invariant(version is None)
+    if not callable(name):
+        return _Solid(
+            name=name,
+            input_defs=input_defs,
+            output_defs=output_defs,
+            config_schema=config_schema,
+            description=description,
+            required_resource_keys=required_resource_keys,
+            tags=tags,
+            version=version,
+            retry_policy=retry_policy,
+        )
+    check.invariant(input_defs is None)
+    check.invariant(output_defs is None)
+    check.invariant(description is None)
+    check.invariant(config_schema is None)
+    check.invariant(required_resource_keys is None)
+    check.invariant(tags is None)
+    check.invariant(version is None)
 
-        return _Solid()(name)
-
-    return _Solid(
-        name=name,
-        input_defs=input_defs,
-        output_defs=output_defs,
-        config_schema=config_schema,
-        description=description,
-        required_resource_keys=required_resource_keys,
-        tags=tags,
-        version=version,
-        retry_policy=retry_policy,
-    )
+    return _Solid()(name)
 
 
 def resolve_checked_solid_fn_inputs(
@@ -324,18 +323,20 @@ def resolve_checked_solid_fn_inputs(
     """
 
     if exclude_nothing:
-        explicit_names = set(
+        explicit_names = {
             inp.name
             for inp in explicit_input_defs
-            if not inp.dagster_type.kind == DagsterTypeKind.NOTHING
-        )
-        nothing_names = set(
+            if inp.dagster_type.kind != DagsterTypeKind.NOTHING
+        }
+
+        nothing_names = {
             inp.name
             for inp in explicit_input_defs
             if inp.dagster_type.kind == DagsterTypeKind.NOTHING
-        )
+        }
+
     else:
-        explicit_names = set(inp.name for inp in explicit_input_defs)
+        explicit_names = {inp.name for inp in explicit_input_defs}
         nothing_names = set()
 
     params = get_function_params(compute_fn.decorated_fn)
@@ -359,18 +360,17 @@ def resolve_checked_solid_fn_inputs(
             )
 
         else:
-            if param.name not in explicit_names:
-                if param.name in nothing_names:
-                    raise DagsterInvalidDefinitionError(
-                        f"{decorator_name} '{fn_name}' decorated function has parameter '{param.name}' that is "
-                        "one of the input_defs of type 'Nothing' which should not be included since "
-                        "no data will be passed for it. "
-                    )
-                else:
-                    inputs_to_infer.add(param.name)
-
-            else:
+            if param.name in explicit_names:
                 used_inputs.add(param.name)
+
+            elif param.name in nothing_names:
+                raise DagsterInvalidDefinitionError(
+                    f"{decorator_name} '{fn_name}' decorated function has parameter '{param.name}' that is "
+                    "one of the input_defs of type 'Nothing' which should not be included since "
+                    "no data will be passed for it. "
+                )
+            else:
+                inputs_to_infer.add(param.name)
 
     undeclared_inputs = explicit_names - used_inputs
     if not has_kwargs and undeclared_inputs:
@@ -410,9 +410,11 @@ def resolve_checked_solid_fn_inputs(
 
 
 def is_context_provided(params: List[funcsigs.Parameter]) -> bool:
-    if len(params) == 0:
-        return False
-    return params[0].name in get_valid_name_permutations("context")
+    return (
+        params[0].name in get_valid_name_permutations("context")
+        if params
+        else False
+    )
 
 
 def lambda_solid(

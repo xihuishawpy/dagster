@@ -31,7 +31,7 @@ def test_execute_on_celery_k8s_subchart_disabled(  # pylint: disable=redefined-o
     # Check that there are no run master jobs
     jobs = batch_api.list_namespaced_job(namespace=namespace)
     runmaster_job_list = list(filter(lambda item: "dagster-run-" in item.metadata.name, jobs.items))
-    assert len(runmaster_job_list) == 0
+    assert not runmaster_job_list
 
     run_config_dict = {
         "resources": {"io_manager": {"config": {"s3_bucket": "dagster-scratch-80542c2"}}},
@@ -81,10 +81,11 @@ def test_execute_on_celery_k8s_subchart_disabled(  # pylint: disable=redefined-o
     start_time = datetime.datetime.now()
     while datetime.datetime.now() < start_time + timeout and not runmaster_job_name:
         jobs = batch_api.list_namespaced_job(namespace=namespace)
-        runmaster_job_list = list(
-            filter(lambda item: "dagster-run-" in item.metadata.name, jobs.items)
-        )
-        if len(runmaster_job_list) > 0:
+        if runmaster_job_list := list(
+            filter(
+                lambda item: "dagster-run-" in item.metadata.name, jobs.items
+            )
+        ):
             runmaster_job_name = runmaster_job_list[0].metadata.name
 
     assert runmaster_job_name
@@ -92,4 +93,4 @@ def test_execute_on_celery_k8s_subchart_disabled(  # pylint: disable=redefined-o
     result = wait_for_job_and_get_raw_logs(
         job_name=runmaster_job_name, namespace=namespace, wait_timeout=450
     )
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"

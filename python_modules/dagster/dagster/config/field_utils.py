@@ -15,18 +15,12 @@ def all_optional_type(config_type: ConfigType) -> bool:
     check.inst_param(config_type, "config_type", ConfigType)
 
     if ConfigTypeKind.is_shape(config_type.kind):
-        for field in config_type.fields.values():  # type: ignore
-            if field.is_required:
-                return False
-        return True
-
-    if ConfigTypeKind.is_selector(config_type.kind):
-        if len(config_type.fields) == 1:  # type: ignore
-            for field in config_type.fields.values():  # type: ignore
-                if field.is_required:
-                    return False
-            return True
-
+        return not any(field.is_required for field in config_type.fields.values())
+    if (
+        ConfigTypeKind.is_selector(config_type.kind)
+        and len(config_type.fields) == 1
+    ):
+        return not any(field.is_required for field in config_type.fields.values())
     return False
 
 
@@ -70,31 +64,31 @@ def _compute_fields_hash(fields, description, field_aliases=None):
 
     m = hashlib.sha1()  # so that hexdigest is 40, not 64 bytes
     if description:
-        _add_hash(m, ":description: " + description)
+        _add_hash(m, f":description: {description}")
 
     for field_name in sorted(list(fields.keys())):
         field = fields[field_name]
-        _add_hash(m, ":fieldname:" + field_name)
+        _add_hash(m, f":fieldname:{field_name}")
         if field.default_provided:
-            _add_hash(m, ":default_value: " + field.default_value_as_json_str)
-        _add_hash(m, ":is_required: " + str(field.is_required))
-        _add_hash(m, ":type_key: " + field.config_type.key)
+            _add_hash(m, f":default_value: {field.default_value_as_json_str}")
+        _add_hash(m, f":is_required: {str(field.is_required)}")
+        _add_hash(m, f":type_key: {field.config_type.key}")
         if field.description:
-            _add_hash(m, ":description: " + field.description)
+            _add_hash(m, f":description: {field.description}")
 
     field_aliases = check.opt_dict_param(
         field_aliases, "field_aliases", key_type=str, value_type=str
     )
     for field_name in sorted(list(field_aliases.keys())):
         field_alias = field_aliases[field_name]
-        _add_hash(m, ":fieldname: " + field_name)
-        _add_hash(m, ":fieldalias: " + field_alias)
+        _add_hash(m, f":fieldname: {field_name}")
+        _add_hash(m, f":fieldalias: {field_alias}")
 
     return m.hexdigest()
 
 
 def _define_shape_key_hash(fields, description, field_aliases):
-    return "Shape." + _compute_fields_hash(fields, description, field_aliases=field_aliases)
+    return f"Shape.{_compute_fields_hash(fields, description, field_aliases=field_aliases)}"
 
 
 class Shape(_ConfigHasFields):
@@ -200,7 +194,7 @@ class Map(ConfigType):
 
 def _define_permissive_dict_key(fields, description):
     return (
-        "Permissive." + _compute_fields_hash(fields, description=description)
+        f"Permissive.{_compute_fields_hash(fields, description=description)}"
         if fields
         else "Permissive"
     )
@@ -245,7 +239,7 @@ class Permissive(_ConfigHasFields):
 
 
 def _define_selector_key(fields, description):
-    return "Selector." + _compute_fields_hash(fields, description=description)
+    return f"Selector.{_compute_fields_hash(fields, description=description)}"
 
 
 class Selector(_ConfigHasFields):
@@ -354,10 +348,9 @@ def expand_list(original_root: object, the_list: List[object], stack: List[str])
             original_root,
             the_list,
             stack,
-            "List have a single item and contain a valid type i.e. [int]. Got item {}".format(
-                repr(the_list[0])
-            ),
+            f"List have a single item and contain a valid type i.e. [int]. Got item {repr(the_list[0])}",
         )
+
 
     return Array(inner_type)
 
@@ -371,13 +364,14 @@ def expand_map(original_root: object, the_dict: Dict[object, object], stack: Lis
 
     key = list(the_dict.keys())[0]
     key_type = _convert_potential_type(original_root, key, stack)
-    if not key_type or not key_type.kind == ConfigTypeKind.SCALAR:
+    if not key_type or key_type.kind != ConfigTypeKind.SCALAR:
         raise DagsterInvalidConfigDefinitionError(
             original_root,
             the_dict,
             stack,
-            "Map dict must have a scalar type as its only key. Got key {}".format(repr(key)),
+            f"Map dict must have a scalar type as its only key. Got key {repr(key)}",
         )
+
 
     inner_type = _convert_potential_type(original_root, the_dict[key], stack)
     if not inner_type:

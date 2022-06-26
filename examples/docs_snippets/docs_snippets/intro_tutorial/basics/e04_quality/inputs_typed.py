@@ -11,7 +11,7 @@ def download_csv():
     response = requests.get("https://docs.dagster.io/assets/cereal.csv")
     lines = response.text.split("\n")
     get_dagster_logger().info(f"Read {len(lines)} lines")
-    return [row for row in csv.DictReader(lines)]
+    return list(csv.DictReader(lines))
 
 
 # end_inputs_typed_marker_0

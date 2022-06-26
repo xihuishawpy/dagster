@@ -81,11 +81,11 @@ def pipeline_list_command(**kwargs):
 
 def execute_list_command(cli_args, print_fn, using_job_op_graph_apis=False):
     with get_instance_for_service(
-        "``dagster job list``" if using_job_op_graph_apis else "``dagster pipeline list``"
-    ) as instance:
+            "``dagster job list``" if using_job_op_graph_apis else "``dagster pipeline list``"
+        ) as instance:
         with get_external_repository_from_kwargs(
-            instance, version=dagster_version, kwargs=cli_args
-        ) as external_repository:
+                    instance, version=dagster_version, kwargs=cli_args
+                ) as external_repository:
             title = "Repository {name}".format(name=external_repository.name)
             print_fn(title)
             print_fn("*" * len(title))
@@ -114,7 +114,7 @@ def execute_list_command(cli_args, print_fn, using_job_op_graph_apis=False):
                     )
                 )
                 for solid_name in pipeline.pipeline_snapshot.solid_names_in_topological_order:
-                    print_fn("    " + solid_name)
+                    print_fn(f"    {solid_name}")
 
 
 def format_description(desc: str, indent: str):
@@ -123,8 +123,7 @@ def format_description(desc: str, indent: str):
     desc = re.sub(r"\s+", " ", desc)
     dedented = textwrap.dedent(desc)
     wrapper = textwrap.TextWrapper(initial_indent="", subsequent_indent=indent)
-    filled = wrapper.fill(dedented)
-    return filled
+    return wrapper.fill(dedented)
 
 
 def get_pipeline_in_same_python_env_instructions(command_name):
@@ -313,19 +312,20 @@ def execute_list_versions_command(instance: DagsterInstance, kwargs: Dict[str, A
 def add_step_to_table(memoized_plan):
     # the step keys that we need to execute are those which do not have their inputs populated.
     step_keys_not_stored = set(memoized_plan.step_keys_to_execute)
-    table = []
-    for step_output_handle, version in memoized_plan.step_output_versions.items():
-        table.append(
-            [
-                "{key}.{output}".format(
-                    key=step_output_handle.step_key, output=step_output_handle.output_name
-                ),
-                version,
-                "stored"
-                if step_output_handle.step_key not in step_keys_not_stored
-                else "to-be-recomputed",
-            ]
-        )
+    table = [
+        [
+            "{key}.{output}".format(
+                key=step_output_handle.step_key,
+                output=step_output_handle.output_name,
+            ),
+            version,
+            "stored"
+            if step_output_handle.step_key not in step_keys_not_stored
+            else "to-be-recomputed",
+        ]
+        for step_output_handle, version in memoized_plan.step_output_versions.items()
+    ]
+
     table_str = tabulate(
         table, headers=["Step Output", "Version", "Status of Output"], tablefmt="github"
     )
@@ -394,7 +394,10 @@ def execute_execute_command(
     result = do_execute_command(pipeline, instance, config, mode, tags, solid_selection, preset)
 
     if not result.success:
-        raise click.ClickException("Pipeline run {} resulted in failure.".format(result.run_id))
+        raise click.ClickException(
+            f"Pipeline run {result.run_id} resulted in failure."
+        )
+
 
     return result
 
@@ -417,11 +420,12 @@ def _check_execute_external_pipeline_args(
     check.opt_str_param(mode, "mode")
     check.opt_str_param(preset, "preset")
     check.invariant(
-        not (mode is not None and preset is not None),
+        mode is None or preset is None,
         "You may set only one of `mode` (got {mode}) or `preset` (got {preset}).".format(
             mode=mode, preset=preset
         ),
     )
+
 
     tags = check.opt_dict_param(tags, "tags", key_type=str)
     check.opt_list_param(solid_selection, "solid_selection", of_type=str)
@@ -461,19 +465,7 @@ def _check_execute_external_pipeline_args(
 
         tags = merge_dicts(pipeline_preset.tags, tags)
 
-    if mode is not None:
-        if not external_pipeline.has_mode(mode):
-            raise DagsterInvariantViolationError(
-                (
-                    "You have attempted to execute pipeline {name} with mode {mode}. "
-                    "Available modes: {modes}"
-                ).format(
-                    name=external_pipeline.name,
-                    mode=mode,
-                    modes=external_pipeline.available_modes,
-                )
-            )
-    else:
+    if mode is None:
         if len(external_pipeline.available_modes) > 1:
             raise DagsterInvariantViolationError(
                 (
@@ -484,6 +476,17 @@ def _check_execute_external_pipeline_args(
             )
         mode = external_pipeline.get_default_mode_name()
 
+    elif not external_pipeline.has_mode(mode):
+        raise DagsterInvariantViolationError(
+            (
+                "You have attempted to execute pipeline {name} with mode {mode}. "
+                "Available modes: {modes}"
+            ).format(
+                name=external_pipeline.name,
+                mode=mode,
+                modes=external_pipeline.available_modes,
+            )
+        )
     tags = merge_dicts(external_pipeline.tags, tags)
 
     return (
@@ -741,9 +744,9 @@ def gen_partition_names_from_args(partition_names, kwargs):
             partition for partition in partition_names if partition in selected_args
         ]
         if len(selected_partitions) < len(selected_args):
-            selected_names = [partition for partition in selected_partitions]
+            selected_names = list(selected_partitions)
             unknown = [selected for selected in selected_args if selected not in selected_names]
-            raise click.UsageError("Unknown partitions: {}".format(", ".join(unknown)))
+            raise click.UsageError(f'Unknown partitions: {", ".join(unknown)}')
         return selected_partitions
 
     start = validate_partition_slice(partition_names, "from", kwargs.get("from"))
@@ -769,20 +772,15 @@ def get_config_from_args(kwargs: Dict[str, str]) -> Dict[str, object]:
         )
         return get_run_config_from_file_list(config_file_list)
 
-    elif config_json:
+    else:
         config_json = cast(str, config_json)
         try:
             return json.loads(config_json)
 
         except JSONDecodeError:
             raise click.UsageError(
-                "Invalid JSON-string given for `--config-json`: {}\n\n{}".format(
-                    config_json,
-                    serializable_error_info_from_exc_info(sys.exc_info()).to_string(),
-                )
+                f"Invalid JSON-string given for `--config-json`: {config_json}\n\n{serializable_error_info_from_exc_info(sys.exc_info()).to_string()}"
             )
-    else:
-        check.failed("Unhandled case getting config from kwargs")
 
 
 def get_tags_from_args(kwargs):
@@ -792,10 +790,7 @@ def get_tags_from_args(kwargs):
         return json.loads(kwargs.get("tags"))
     except JSONDecodeError as e:
         raise click.UsageError(
-            "Invalid JSON-string given for `--tags`: {}\n\n{}".format(
-                kwargs.get("tags"),
-                serializable_error_info_from_exc_info(sys.exc_info()).to_string(),
-            )
+            f'Invalid JSON-string given for `--tags`: {kwargs.get("tags")}\n\n{serializable_error_info_from_exc_info(sys.exc_info()).to_string()}'
         ) from e
 
 
@@ -818,9 +813,10 @@ def print_partition_format(partitions, indent_level):
     num_columns = min(10, int((screen_width - indent_level) / (max_str_len + spacing)))
     column_width = int((screen_width - indent_level) / num_columns)
     prefix = " " * max(0, indent_level - spacing)
-    lines = []
-    for chunk in list(split_chunk(partitions, num_columns)):
-        lines.append(prefix + "".join(partition.rjust(column_width) for partition in chunk))
+    lines = [
+        prefix + "".join(partition.rjust(column_width) for partition in chunk)
+        for chunk in list(split_chunk(partitions, num_columns))
+    ]
 
     return "\n" + "\n".join(lines)
 
@@ -835,7 +831,7 @@ def validate_partition_slice(partition_names, name, value):
     if value is None:
         return 0 if is_start else len(partition_names)
     if value not in partition_names:
-        raise click.UsageError("invalid value {} for {}".format(value, name))
+        raise click.UsageError(f"invalid value {value} for {name}")
     index = partition_names.index(value)
     return index if is_start else index + 1
 
@@ -918,8 +914,9 @@ def _execute_backfill_command_at_location(
 
     if not pipeline_partition_set_names:
         raise click.UsageError(
-            "No partition sets found for pipeline/job `{}`".format(external_pipeline.name)
+            f"No partition sets found for pipeline/job `{external_pipeline.name}`"
         )
+
     partition_set_name = cli_args.get("partition_set")
     if not partition_set_name:
         if len(pipeline_partition_set_names) == 1:
@@ -928,15 +925,14 @@ def _execute_backfill_command_at_location(
             raise click.UsageError("No partition set specified (see option `--partition-set`)")
         else:
             partition_set_name = click.prompt(
-                "Select a partition set to use for backfill: {}".format(
-                    ", ".join(x for x in pipeline_partition_set_names.keys())
-                )
+                f'Select a partition set to use for backfill: {", ".join(pipeline_partition_set_names)}'
             )
+
 
     partition_set = pipeline_partition_set_names.get(partition_set_name)
 
     if not partition_set:
-        raise click.UsageError("No partition set found named `{}`".format(partition_set_name))
+        raise click.UsageError(f"No partition set found named `{partition_set_name}`")
 
     run_tags = get_tags_from_args(cli_args)
 
@@ -964,14 +960,17 @@ def _execute_backfill_command_at_location(
     )
 
     # Print backfill info
-    print_fn("\n Pipeline/Job: {}".format(external_pipeline.name))
+    print_fn(f"\n Pipeline/Job: {external_pipeline.name}")
     if not using_graph_job_op_apis:
-        print_fn("Partition set: {}".format(partition_set_name))
-    print_fn("   Partitions: {}\n".format(print_partition_format(partition_names, indent_level=15)))
+        print_fn(f"Partition set: {partition_set_name}")
+    print_fn(
+        f"   Partitions: {print_partition_format(partition_names, indent_level=15)}\n"
+    )
+
 
     # Confirm and launch
     if noprompt or click.confirm(
-        "Do you want to proceed with the backfill ({} partitions)?".format(len(partition_names))
+        f"Do you want to proceed with the backfill ({len(partition_names)} partitions)?"
     ):
 
         print_fn("Launching runs... ")
@@ -1000,25 +999,24 @@ def _execute_backfill_command_at_location(
             instance.add_backfill(
                 backfill_job.with_status(BulkActionStatus.FAILED).with_error(error_info)
             )
-            return print_fn("Backfill failed: {}".format(error_info))
+            return print_fn(f"Backfill failed: {error_info}")
 
         assert isinstance(partition_execution_data, ExternalPartitionSetExecutionParamData)
 
         for partition_data in partition_execution_data.partition_data:
-            pipeline_run = create_backfill_run(
+            if pipeline_run := create_backfill_run(
                 instance,
                 repo_location,
                 external_pipeline,
                 partition_set,
                 backfill_job,
                 partition_data,
-            )
-            if pipeline_run:
+            ):
                 instance.submit_run(pipeline_run.run_id, workspace)
 
         instance.add_backfill(backfill_job.with_status(BulkActionStatus.COMPLETED))
 
-        print_fn("Launched backfill job `{}`".format(backfill_id))
+        print_fn(f"Launched backfill job `{backfill_id}`")
 
     else:
         print_fn("Aborted!")

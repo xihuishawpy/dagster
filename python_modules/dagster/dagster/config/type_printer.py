@@ -29,7 +29,12 @@ def _print_type(config_schema_snapshot, config_type_key, print_fn, with_lines):
 
 
 def _do_print(config_schema_snapshot, config_type_key, printer, with_lines=True):
-    line_break_fn = printer.line if with_lines else lambda string: printer.append(string + " ")
+    line_break_fn = (
+        printer.line
+        if with_lines
+        else (lambda string: printer.append(f"{string} "))
+    )
+
 
     config_type_snap = config_schema_snapshot.get_config_snap(config_type_key)
     kind = config_type_snap.kind
@@ -74,9 +79,9 @@ def _do_print(config_schema_snapshot, config_type_key, printer, with_lines=True)
             for field_snap in sorted(config_type_snap.fields):
                 name = field_snap.name
                 if field_snap.is_required:
-                    printer.append(name + ": ")
+                    printer.append(f"{name}: ")
                 else:
-                    printer.append(name + "?: ")
+                    printer.append(f"{name}?: ")
                 _do_print(
                     config_schema_snapshot,
                     field_snap.type_key,

@@ -52,7 +52,7 @@ class CommandStepBuilder:
             self._step["key"] = key
 
     def run(self, *commands: str) -> "CommandStepBuilder":
-        self._step["commands"] = ["time " + cmd for cmd in commands]
+        self._step["commands"] = [f"time {cmd}" for cmd in commands]
         return self
 
     def _base_docker_settings(self) -> Dict[str, object]:

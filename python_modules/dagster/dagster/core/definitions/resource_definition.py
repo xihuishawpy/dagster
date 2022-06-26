@@ -196,41 +196,38 @@ class ResourceDefinition(AnonymousConfigurableDefinition, RequiresResources):
     def __call__(self, *args, **kwargs):
         from dagster.core.execution.context.init import UnboundInitResourceContext
 
-        context_provided = is_context_provided(self.resource_fn)
-
-        if context_provided:
-            if len(args) + len(kwargs) == 0:
-                raise DagsterInvalidInvocationError(
-                    "Resource initialization function has context argument, but no context was provided "
-                    "when invoking."
-                )
-            if len(args) + len(kwargs) > 1:
-                raise DagsterInvalidInvocationError(
-                    "Initialization of resource received multiple arguments. Only a first "
-                    "positional context parameter should be provided when invoking."
-                )
-
-            context_param_name = get_function_params(self.resource_fn)[0].name
-
-            if args:
-                check.opt_inst_param(args[0], context_param_name, UnboundInitResourceContext)
-                return resource_invocation_result(
-                    self, cast(Optional[UnboundInitResourceContext], args[0])
-                )
-            else:
-                if context_param_name not in kwargs:
-                    raise DagsterInvalidInvocationError(
-                        f"Resource initialization expected argument '{context_param_name}'."
-                    )
-                check.opt_inst_param(
-                    kwargs[context_param_name], context_param_name, UnboundInitResourceContext
-                )
-
-                return resource_invocation_result(
-                    self, cast(Optional[UnboundInitResourceContext], kwargs[context_param_name])
-                )
-        else:
+        if not (context_provided := is_context_provided(self.resource_fn)):
             return resource_invocation_result(self, None)
+        if len(args) + len(kwargs) == 0:
+            raise DagsterInvalidInvocationError(
+                "Resource initialization function has context argument, but no context was provided "
+                "when invoking."
+            )
+        if len(args) + len(kwargs) > 1:
+            raise DagsterInvalidInvocationError(
+                "Initialization of resource received multiple arguments. Only a first "
+                "positional context parameter should be provided when invoking."
+            )
+
+        context_param_name = get_function_params(self.resource_fn)[0].name
+
+        if args:
+            check.opt_inst_param(args[0], context_param_name, UnboundInitResourceContext)
+            return resource_invocation_result(
+                self, cast(Optional[UnboundInitResourceContext], args[0])
+            )
+        else:
+            if context_param_name not in kwargs:
+                raise DagsterInvalidInvocationError(
+                    f"Resource initialization expected argument '{context_param_name}'."
+                )
+            check.opt_inst_param(
+                kwargs[context_param_name], context_param_name, UnboundInitResourceContext
+            )
+
+            return resource_invocation_result(
+                self, cast(Optional[UnboundInitResourceContext], kwargs[context_param_name])
+            )
 
     def get_resource_requirements(
         self, outer_context: Optional[object] = None
@@ -262,8 +259,7 @@ class _ResourceDecoratorCallable:
 
         params = get_function_params(resource_fn)
 
-        missing_positional = validate_expected_params(params, any_name)
-        if missing_positional:
+        if missing_positional := validate_expected_params(params, any_name):
             raise DagsterInvalidDefinitionError(
                 f"@resource decorated function '{resource_fn.__name__}' expects a single "
                 "positional argument."
@@ -271,8 +267,7 @@ class _ResourceDecoratorCallable:
 
         extras = params[len(any_name) :]
 
-        required_extras = list(filter(is_required_param, extras))
-        if required_extras:
+        if required_extras := list(filter(is_required_param, extras)):
             raise DagsterInvalidDefinitionError(
                 f"@resource decorated function '{resource_fn.__name__}' expects only a single positional required argument. "
                 f"Got required extra params {', '.join(positional_arg_name_list(required_extras))}"

@@ -319,7 +319,6 @@ def _disposable_and_async_gen_from_obs(obs: Observable, loop):
 
     async def async_gen():
         while True:
-            i = await queue.get()
-            yield i
+            yield await queue.get()
 
     return disposable, async_gen()
