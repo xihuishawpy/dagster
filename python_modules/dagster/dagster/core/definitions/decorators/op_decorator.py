@@ -147,37 +147,41 @@ def _resolve_output_defs_from_outs(
         return None
     if isinstance(out, Out):
         return [out.to_definition(inferred_out.annotation, name=None)]
-    else:
-        check.mapping_param(out, "out", key_type=str, value_type=Out)
+    check.mapping_param(out, "out", key_type=str, value_type=Out)
 
-        # If only a single entry has been provided to the out dict, then slurp the
-        # annotation into the entry.
-        if len(out) == 1:
-            name = list(out.keys())[0]
-            only_out = out[name]
-            return [only_out.to_definition(inferred_out.annotation, name)]
+    # If only a single entry has been provided to the out dict, then slurp the
+    # annotation into the entry.
+    if len(out) == 1:
+        name = list(out.keys())[0]
+        only_out = out[name]
+        return [only_out.to_definition(inferred_out.annotation, name)]
 
-        output_defs = []
+    output_defs = []
 
         # Introspection on type annotations is experimental, so checking
         # metaclass is the best we can do.
-        if inferred_out.annotation and not get_origin(inferred_out.annotation) == tuple:
-            raise DagsterInvariantViolationError(
-                "Expected Tuple annotation for multiple outputs, but received non-tuple annotation."
-            )
-        if inferred_out.annotation and not len(inferred_out.annotation.__args__) == len(out):
-            raise DagsterInvariantViolationError(
-                "Expected Tuple annotation to have number of entries matching the "
-                f"number of outputs for more than one output. Expected {len(out)} "
-                f"outputs but annotation has {len(inferred_out.annotation.__args__)}."
-            )
-        for idx, (name, cur_out) in enumerate(out.items()):
-            annotation_type = (
-                inferred_out.annotation.__args__[idx] if inferred_out.annotation else None
-            )
-            output_defs.append(cur_out.to_definition(annotation_type, name=name))
+    if (
+        inferred_out.annotation
+        and get_origin(inferred_out.annotation) != tuple
+    ):
+        raise DagsterInvariantViolationError(
+            "Expected Tuple annotation for multiple outputs, but received non-tuple annotation."
+        )
+    if inferred_out.annotation and len(
+        inferred_out.annotation.__args__
+    ) != len(out):
+        raise DagsterInvariantViolationError(
+            "Expected Tuple annotation to have number of entries matching the "
+            f"number of outputs for more than one output. Expected {len(out)} "
+            f"outputs but annotation has {len(inferred_out.annotation.__args__)}."
+        )
+    for idx, (name, cur_out) in enumerate(out.items()):
+        annotation_type = (
+            inferred_out.annotation.__args__[idx] if inferred_out.annotation else None
+        )
+        output_defs.append(cur_out.to_definition(annotation_type, name=name))
 
-        return output_defs
+    return output_defs
 
 
 @overload
@@ -290,27 +294,26 @@ def op(
     """
 
     # This case is for when decorator is used bare, without arguments. e.g. @op versus @op()
-    if callable(name):
-        check.invariant(input_defs is None)
-        check.invariant(output_defs is None)
-        check.invariant(description is None)
-        check.invariant(config_schema is None)
-        check.invariant(required_resource_keys is None)
-        check.invariant(tags is None)
-        check.invariant(version is None)
+    if not callable(name):
+        return _Op(
+            name=name,
+            description=description,
+            input_defs=input_defs,
+            output_defs=output_defs,
+            config_schema=config_schema,
+            required_resource_keys=required_resource_keys,
+            tags=tags,
+            version=version,
+            retry_policy=retry_policy,
+            ins=ins,
+            out=out,
+        )
+    check.invariant(input_defs is None)
+    check.invariant(output_defs is None)
+    check.invariant(description is None)
+    check.invariant(config_schema is None)
+    check.invariant(required_resource_keys is None)
+    check.invariant(tags is None)
+    check.invariant(version is None)
 
-        return _Op()(name)
-
-    return _Op(
-        name=name,
-        description=description,
-        input_defs=input_defs,
-        output_defs=output_defs,
-        config_schema=config_schema,
-        required_resource_keys=required_resource_keys,
-        tags=tags,
-        version=version,
-        retry_policy=retry_policy,
-        ins=ins,
-        out=out,
-    )
+    return _Op()(name)

@@ -14,6 +14,4 @@ def sync_get_streaming_external_notebook_data_grpc(
     check.inst_param(api_client, "api_client", DagsterGrpcClient)
     check.str_param(notebook_path, "notebook_path")
 
-    result = api_client.external_notebook_data(notebook_path=notebook_path)
-
-    return result
+    return api_client.external_notebook_data(notebook_path=notebook_path)

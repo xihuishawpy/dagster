@@ -85,9 +85,9 @@ def schedule_partition_range(
             )
         )
 
-    tz = timezone if timezone else "UTC"
+    tz = timezone or "UTC"
 
-    _current_time = current_time if current_time else pendulum.now(tz)
+    _current_time = current_time or pendulum.now(tz)
 
     # Coerce to the definition timezone
     _start = (
@@ -172,8 +172,7 @@ class PartitionsDefinition(ABC, Generic[T]):
         ...
 
     def __str__(self) -> str:
-        joined_keys = ", ".join([f"'{key}'" for key in self.get_partition_keys()])
-        return joined_keys
+        return ", ".join([f"'{key}'" for key in self.get_partition_keys()])
 
     def get_partition_keys(self, current_time: Optional[datetime] = None) -> List[str]:
         return [partition.name for partition in self.get_partitions(current_time)]
@@ -192,7 +191,7 @@ class StaticPartitionsDefinition(
 
         # Dagit selects partition ranges following the format '2022-01-13...2022-01-14'
         # "..." is an invalid substring in partition keys
-        if any(["..." in partition_key for partition_key in partition_keys]):
+        if any("..." in partition_key for partition_key in partition_keys):
             raise DagsterInvalidDefinitionError("'...' is an invalid substring in a partition key")
 
         self._partitions = [Partition(key) for key in partition_keys]
@@ -498,9 +497,9 @@ class PartitionSetDefinition(Generic[T]):
         user_tags = validate_tags(
             self._user_defined_tags_fn_for_partition(partition), allow_reserved_tags=False
         )
-        tags = merge_dicts(user_tags, PipelineRun.tags_for_partition_set(self, partition))
-
-        return tags
+        return merge_dicts(
+            user_tags, PipelineRun.tags_for_partition_set(self, partition)
+        )
 
     def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition[T]]:
         """Return the set of known partitions.
@@ -596,13 +595,11 @@ class PartitionSetDefinition(Generic[T]):
 
             partition_names = self.get_partition_names(context.scheduled_execution_time)
 
-            missing_partition_names = [
+            if missing_partition_names := [
                 partition.name
                 for partition in selected_partitions
                 if partition.name not in partition_names
-            ]
-
-            if missing_partition_names:
+            ]:
                 yield SkipReason(
                     "Partition selector returned partition"
                     + ("s" if len(missing_partition_names) > 1 else "")
@@ -723,13 +720,13 @@ class PartitionScheduleDefinition(ScheduleDefinition):
 
         if args:
             date = check.opt_inst_param(args[0], date_param_name, datetime)
-        else:
-            if date_param_name not in kwargs:
-                raise DagsterInvalidInvocationError(
-                    f"Schedule invocation expected argument '{date_param_name}'."
-                )
+        elif date_param_name in kwargs:
             date = check.opt_inst_param(kwargs[date_param_name], date_param_name, datetime)
 
+        else:
+            raise DagsterInvalidInvocationError(
+                f"Schedule invocation expected argument '{date_param_name}'."
+            )
         return self._decorated_fn(date)
 
     def get_partition_set(self):
@@ -783,7 +780,7 @@ class PartitionedConfig(Generic[T]):
         """
         partitions = self.partitions_def.get_partitions()
         partition = [p for p in partitions if p.name == partition_key]
-        if len(partition) == 0:
+        if not partition:
             raise DagsterInvalidInvocationError(f"No partition for partition key {partition_key}.")
         return self.run_config_for_partition_fn(partition[0])
 

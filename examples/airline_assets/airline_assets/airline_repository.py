@@ -41,8 +41,7 @@ def get_us_flights(passenger_flights):
 def layover_percentage_breakdown(flights):
     # Group by number of layovers
     grouped_by_num_layovers = flights.groupby("num_layovers").size()
-    layover_counts_percentage = grouped_by_num_layovers / len(flights)
-    return layover_counts_percentage
+    return grouped_by_num_layovers / len(flights)
 
 
 @graph(out={"us_flights": GraphOut(), "us_layover_percentages": GraphOut()})

@@ -15,17 +15,15 @@ from docs_snippets.concepts.ops_jobs_graphs.ops import (
 
 
 def generate_stub_input_values(solid):
-    input_values = {}
-
     default_values = {"String": "abc", "Int": 1, "Any": 1}
 
     input_defs = solid.input_defs
-    for input_def in input_defs:
-        input_values[input_def.name] = default_values.get(
+    return {
+        input_def.name: default_values.get(
             str(input_def.dagster_type.display_name), 2
         )
-
-    return input_values
+        for input_def in input_defs
+    }
 
 
 def test_ops_compile_and_execute():

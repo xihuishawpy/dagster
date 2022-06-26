@@ -208,12 +208,11 @@ class PresetDefinition(
         check.opt_nullable_dict_param(run_config, "run_config")
         if run_config is None:
             return self
-        else:
-            initial_config = self.run_config or {}
-            return PresetDefinition(
-                name=self.name,
-                solid_selection=self.solid_selection,
-                mode=self.mode,
-                tags=self.tags,
-                run_config=deep_merge_dicts(initial_config, run_config),
-            )
+        initial_config = self.run_config or {}
+        return PresetDefinition(
+            name=self.name,
+            solid_selection=self.solid_selection,
+            mode=self.mode,
+            tags=self.tags,
+            run_config=deep_merge_dicts(initial_config, run_config),
+        )

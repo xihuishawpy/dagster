@@ -38,10 +38,7 @@ CELERY_WORKER_NAME_PREFIX = "dagster-celery-workers"
 
 @pytest.fixture(scope="session")
 def should_cleanup(pytestconfig):
-    if IS_BUILDKITE:
-        return False
-    else:
-        return not pytestconfig.getoption("--no-cleanup")
+    return False if IS_BUILDKITE else not pytestconfig.getoption("--no-cleanup")
 
 
 @contextmanager
@@ -55,7 +52,7 @@ def _create_namespace(should_cleanup, existing_helm_namespace=None, prefix="dags
     if existing_helm_namespace:
         namespace = existing_helm_namespace
     else:
-        print("Creating namespace %s" % namespace)
+        print(f"Creating namespace {namespace}")
         kube_namespace = kubernetes.client.V1Namespace(
             metadata=kubernetes.client.V1ObjectMeta(name=namespace)
         )
@@ -64,7 +61,7 @@ def _create_namespace(should_cleanup, existing_helm_namespace=None, prefix="dags
     yield namespace
 
     if should_cleanup:
-        print("Deleting namespace %s" % namespace)
+        print(f"Deleting namespace {namespace}")
         kube_api.delete_namespace(name=namespace)
 
 
@@ -92,9 +89,9 @@ def run_monitoring_namespace(pytestconfig, should_cleanup):
 
     Yields the Helm chart namespace.
     """
-    existing_helm_namespace = pytestconfig.getoption("--existing-helm-namespace")
-
-    if existing_helm_namespace:
+    if existing_helm_namespace := pytestconfig.getoption(
+        "--existing-helm-namespace"
+    ):
         namespace = existing_helm_namespace
     else:
         # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
@@ -103,7 +100,7 @@ def run_monitoring_namespace(pytestconfig, should_cleanup):
         print("--- \033[32m:k8s: Creating test namespace %s\033[0m" % namespace)
         kube_api = kubernetes.client.CoreV1Api()
 
-        print("Creating namespace %s" % namespace)
+        print(f"Creating namespace {namespace}")
         kube_namespace = kubernetes.client.V1Namespace(
             metadata=kubernetes.client.V1ObjectMeta(name=namespace)
         )
@@ -114,7 +111,7 @@ def run_monitoring_namespace(pytestconfig, should_cleanup):
     # Can skip this step as a time saver when we're going to destroy the cluster anyway, e.g.
     # w/ a kind cluster
     if should_cleanup:
-        print("Deleting namespace %s" % namespace)
+        print(f"Deleting namespace {namespace}")
         kube_api.delete_namespace(name=namespace)
 
 
@@ -184,7 +181,7 @@ def aws_configmap(namespace, should_cleanup):
                     f"'aws sso login' to authenticate. Original error: {e}"
                 )
 
-        print("Creating ConfigMap %s with AWS credentials" % (TEST_AWS_CONFIGMAP_NAME))
+        print(f"Creating ConfigMap {TEST_AWS_CONFIGMAP_NAME} with AWS credentials")
         aws_configmap = kubernetes.client.V1ConfigMap(
             api_version="v1",
             kind="ConfigMap",
@@ -277,9 +274,9 @@ def helm_namespace_for_user_deployments_subchart_disabled(
     namespace = helm_namespace_for_user_deployments_subchart
 
     with helm_chart_for_user_deployments_subchart_disabled(
-        namespace, dagster_docker_image, should_cleanup
-    ):
-        print("Helm chart successfully installed in namespace %s" % namespace)
+            namespace, dagster_docker_image, should_cleanup
+        ):
+        print(f"Helm chart successfully installed in namespace {namespace}")
         yield namespace
 
 
@@ -479,7 +476,7 @@ def _helm_chart_helper(
     check.bool_param(should_cleanup, "should_cleanup")
     check.str_param(helm_install_name, "helm_install_name")
 
-    print("--- \033[32m:helm: Installing Helm chart {}\033[0m".format(helm_install_name))
+    print(f"--- \033[32m:helm: Installing Helm chart {helm_install_name}\033[0m")
 
     try:
         helm_config_yaml = yaml.dump(helm_config, default_flow_style=False)
@@ -565,14 +562,14 @@ def _helm_chart_helper(
                     )
                     assert queue.get("replicaCount") == num_pods_for_queue
 
-                    labels = queue.get("labels")
-                    if labels:
-                        target_deployments = []
-                        for item in deployments.items:
-                            if queue.get("name") in item.metadata.name:
-                                target_deployments.append(item)
+                    if labels := queue.get("labels"):
+                        target_deployments = [
+                            item
+                            for item in deployments.items
+                            if queue.get("name") in item.metadata.name
+                        ]
 
-                        assert len(target_deployments) > 0
+                        assert target_deployments
                         for target in target_deployments:
                             for key in labels:
                                 assert target.spec.template.metadata.labels.get(key) == labels.get(
@@ -581,7 +578,7 @@ def _helm_chart_helper(
 
                 print("Waiting for celery workers")
                 for pod_name in pod_names:
-                    print("Waiting for Celery worker pod %s" % pod_name)
+                    print(f"Waiting for Celery worker pod {pod_name}")
                     wait_for_pod(pod_name, namespace=namespace)
 
                 rabbitmq_enabled = "rabbitmq" in helm_config and helm_config["rabbitmq"].get(
@@ -597,12 +594,13 @@ def _helm_chart_helper(
                             raise Exception("No rabbitmq pod after 2 minutes")
 
                         pods = kube_api.list_namespaced_pod(namespace=namespace)
-                        pod_names = [
-                            p.metadata.name for p in pods.items if "rabbitmq" in p.metadata.name
-                        ]
-                        if pod_names:
+                        if pod_names := [
+                            p.metadata.name
+                            for p in pods.items
+                            if "rabbitmq" in p.metadata.name
+                        ]:
                             assert len(pod_names) == 1
-                            print("Waiting for rabbitmq pod to be ready: " + str(pod_names[0]))
+                            print(f"Waiting for rabbitmq pod to be ready: {str(pod_names[0])}")
 
                             wait_for_pod(pod_names[0], namespace=namespace)
                             break
@@ -616,12 +614,13 @@ def _helm_chart_helper(
                             raise Exception("No redis pods after 2 minutes")
 
                         pods = kube_api.list_namespaced_pod(namespace=namespace)
-                        pod_names = [
-                            p.metadata.name for p in pods.items if "redis" in p.metadata.name
-                        ]
-                        if pod_names and len(pod_names) >= 1:
+                        if pod_names := [
+                            p.metadata.name
+                            for p in pods.items
+                            if "redis" in p.metadata.name
+                        ]:
                             for pod_name in pod_names:
-                                print("Waiting for redis pod to be ready: " + str(pod_name))
+                                print(f"Waiting for redis pod to be ready: {str(pod_name)}")
                                 wait_for_pod(pod_name, namespace=namespace)
                             break
                         time.sleep(5)
@@ -646,10 +645,10 @@ def _helm_chart_helper(
                 p.metadata.name for p in pods.items if "user-code-deployment" in p.metadata.name
             ]
             for pod_name in pod_names:
-                print("Waiting for user code deployment pod %s" % pod_name)
+                print(f"Waiting for user code deployment pod {pod_name}")
                 wait_for_pod(pod_name, namespace=namespace)
 
-        print("Helm chart successfully installed in namespace %s" % namespace)
+        print(f"Helm chart successfully installed in namespace {namespace}")
         yield
 
     finally:
@@ -723,10 +722,18 @@ def helm_chart_for_k8s_run_launcher(
                 "config": {
                     "k8sRunLauncher": {
                         "jobNamespace": user_code_namespace,
-                        "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}]
-                        + ([{"name": TEST_AWS_CONFIGMAP_NAME}] if not IS_BUILDKITE else []),
+                        "envConfigMaps": (
+                            [{"name": TEST_CONFIGMAP_NAME}]
+                            + (
+                                []
+                                if IS_BUILDKITE
+                                else [{"name": TEST_AWS_CONFIGMAP_NAME}]
+                            )
+                        ),
                         "envSecrets": [{"name": TEST_SECRET_NAME}],
-                        "envVars": (["BUILDKITE=1"] if os.getenv("BUILDKITE") else []),
+                        "envVars": ["BUILDKITE=1"]
+                        if os.getenv("BUILDKITE")
+                        else [],
                         "imagePullPolicy": image_pull_policy(),
                         "volumeMounts": [
                             {
@@ -738,7 +745,9 @@ def helm_chart_for_k8s_run_launcher(
                         "volumes": [
                             {
                                 "name": "test-volume",
-                                "configMap": {"name": TEST_VOLUME_CONFIGMAP_NAME},
+                                "configMap": {
+                                    "name": TEST_VOLUME_CONFIGMAP_NAME
+                                },
                             }
                         ],
                         "labels": {
@@ -749,20 +758,40 @@ def helm_chart_for_k8s_run_launcher(
             },
             "dagsterDaemon": {
                 "enabled": True,
-                "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                "image": {
+                    "repository": repository,
+                    "tag": tag,
+                    "pullPolicy": pull_policy,
+                },
                 "heartbeatTolerance": 180,
                 "runCoordinator": {"enabled": False},  # No run queue
-                "env": ({"BUILDKITE": os.getenv("BUILDKITE")} if os.getenv("BUILDKITE") else {}),
-                "annotations": {"dagster-integration-tests": "daemon-pod-annotation"},
+                "env": (
+                    {"BUILDKITE": os.getenv("BUILDKITE")}
+                    if os.getenv("BUILDKITE")
+                    else {}
+                ),
+                "annotations": {
+                    "dagster-integration-tests": "daemon-pod-annotation"
+                },
                 "runMonitoring": {"enabled": True, "pollIntervalSeconds": 5}
                 if run_monitoring
                 else {},
             },
             "dagit": {
-                "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                "image": {
+                    "repository": repository,
+                    "tag": tag,
+                    "pullPolicy": pull_policy,
+                },
                 "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-                "annotations": {"dagster-integration-tests": "dagit-pod-annotation"},
-                "service": {"annotations": {"dagster-integration-tests": "dagit-svc-annotation"}},
+                "annotations": {
+                    "dagster-integration-tests": "dagit-pod-annotation"
+                },
+                "service": {
+                    "annotations": {
+                        "dagster-integration-tests": "dagit-svc-annotation"
+                    }
+                },
                 "workspace": {
                     "enabled": not enable_subchart,
                     "servers": [
@@ -776,6 +805,7 @@ def helm_chart_for_k8s_run_launcher(
             },
         },
     )
+
 
     with _helm_chart_helper(
         system_namespace,
@@ -838,7 +868,11 @@ def _deployment_config(docker_image):
     return [
         {
             "name": "user-code-deployment-1",
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {
+                "repository": repository,
+                "tag": tag,
+                "pullPolicy": pull_policy,
+            },
             "dagsterApiGrpcArgs": [
                 "-m",
                 "dagster_test.test_project.test_pipelines.repo",
@@ -849,11 +883,21 @@ def _deployment_config(docker_image):
             "includeConfigInLaunchedRuns": {
                 "enabled": True,
             },
-            "env": ({"BUILDKITE": os.getenv("BUILDKITE")} if os.getenv("BUILDKITE") else {}),
-            "envConfigMaps": ([{"name": TEST_AWS_CONFIGMAP_NAME}] if not IS_BUILDKITE else []),
+            "env": {"BUILDKITE": os.getenv("BUILDKITE")}
+            if os.getenv("BUILDKITE")
+            else {},
+            "envConfigMaps": []
+            if IS_BUILDKITE
+            else [{"name": TEST_AWS_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_DEPLOYMENT_SECRET_NAME}],
-            "annotations": {"dagster-integration-tests": "ucd-1-pod-annotation"},
-            "service": {"annotations": {"dagster-integration-tests": "ucd-1-svc-annotation"}},
+            "annotations": {
+                "dagster-integration-tests": "ucd-1-pod-annotation"
+            },
+            "service": {
+                "annotations": {
+                    "dagster-integration-tests": "ucd-1-svc-annotation"
+                }
+            },
             "volumeMounts": [
                 {
                     "name": "test-volume",
@@ -861,8 +905,13 @@ def _deployment_config(docker_image):
                     "subPath": "volume_mounted_file.yaml",
                 }
             ],
-            "volumes": [{"name": "test-volume", "configMap": {"name": TEST_VOLUME_CONFIGMAP_NAME}}],
-        },
+            "volumes": [
+                {
+                    "name": "test-volume",
+                    "configMap": {"name": TEST_VOLUME_CONFIGMAP_NAME},
+                }
+            ],
+        }
     ]
 
 
@@ -876,10 +925,20 @@ def _base_helm_config(system_namespace, docker_image, enable_subchart=True):
             "deployments": _deployment_config(docker_image),
         },
         "dagit": {
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {
+                "repository": repository,
+                "tag": tag,
+                "pullPolicy": pull_policy,
+            },
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-            "annotations": {"dagster-integration-tests": "dagit-pod-annotation"},
-            "service": {"annotations": {"dagster-integration-tests": "dagit-svc-annotation"}},
+            "annotations": {
+                "dagster-integration-tests": "dagit-pod-annotation"
+            },
+            "service": {
+                "annotations": {
+                    "dagster-integration-tests": "dagit-svc-annotation"
+                }
+            },
         },
         "flower": {
             "enabled": True,
@@ -898,14 +957,24 @@ def _base_helm_config(system_namespace, docker_image, enable_subchart=True):
             "type": "CeleryK8sRunLauncher",
             "config": {
                 "celeryK8sRunLauncher": {
-                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "image": {
+                        "repository": repository,
+                        "tag": tag,
+                        "pullPolicy": pull_policy,
+                    },
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
                         {
                             "name": "extra-queue-1",
                             "replicaCount": 1,
-                            "labels": {"celery-label-key": "celery-label-value"},
-                            "additionalCeleryArgs": ["-E", "--concurrency", "3"],
+                            "labels": {
+                                "celery-label-key": "celery-label-value"
+                            },
+                            "additionalCeleryArgs": [
+                                "-E",
+                                "--concurrency",
+                                "3",
+                            ],
                         },
                     ],
                     "livenessProbe": {
@@ -919,10 +988,12 @@ def _base_helm_config(system_namespace, docker_image, enable_subchart=True):
                         "broker_transport_options": {"priority_steps": [9]},
                         "worker_concurrency": 1,
                     },
-                    "annotations": {"dagster-integration-tests": "celery-pod-annotation"},
-                    "envConfigMaps": (
-                        [{"name": TEST_AWS_CONFIGMAP_NAME}] if not IS_BUILDKITE else []
-                    ),
+                    "annotations": {
+                        "dagster-integration-tests": "celery-pod-annotation"
+                    },
+                    "envConfigMaps": []
+                    if IS_BUILDKITE
+                    else [{"name": TEST_AWS_CONFIGMAP_NAME}],
                     "env": {"TEST_SET_ENV_VAR": "test_celery_env_var"},
                     "envSecrets": [{"name": TEST_SECRET_NAME}],
                     "volumeMounts": [
@@ -941,7 +1012,7 @@ def _base_helm_config(system_namespace, docker_image, enable_subchart=True):
                     "labels": {
                         "run_launcher_label_key": "run_launcher_label_value",
                     },
-                },
+                }
             },
         },
         "rabbitmq": {"enabled": True},
@@ -956,18 +1027,33 @@ def _base_helm_config(system_namespace, docker_image, enable_subchart=True):
         },
         "dagsterDaemon": {
             "enabled": True,
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {
+                "repository": repository,
+                "tag": tag,
+                "pullPolicy": pull_policy,
+            },
             "heartbeatTolerance": 180,
             "runCoordinator": {"enabled": False},  # No run queue
-            "env": ({"BUILDKITE": os.getenv("BUILDKITE")} if os.getenv("BUILDKITE") else {}),
-            "annotations": {"dagster-integration-tests": "daemon-pod-annotation"},
+            "env": (
+                {"BUILDKITE": os.getenv("BUILDKITE")}
+                if os.getenv("BUILDKITE")
+                else {}
+            ),
+            "annotations": {
+                "dagster-integration-tests": "daemon-pod-annotation"
+            },
             "runMonitoring": {
                 "enabled": True,
                 "pollIntervalSeconds": 5,
             },
         },
-        # Used to set the environment variables in dagster.shared_env that determine the run config
-        "pipelineRun": {"image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy}},
+        "pipelineRun": {
+            "image": {
+                "repository": repository,
+                "tag": tag,
+                "pullPolicy": pull_policy,
+            }
+        },
         "imagePullSecrets": [{"name": TEST_IMAGE_PULL_SECRET_NAME}],
     }
 

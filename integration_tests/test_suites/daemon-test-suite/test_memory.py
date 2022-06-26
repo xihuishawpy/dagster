@@ -70,20 +70,20 @@ def get_example_repo(instance):
 
 def test_no_memory_leaks():
     with instance_for_test(
-        overrides={
-            "run_coordinator": {
-                "module": "dagster.core.run_coordinator",
-                "class": "QueuedRunCoordinator",
-            },
-            "run_launcher": {
-                "class": "DefaultRunLauncher",
-                "module": "dagster.core.launcher.default_run_launcher",
-                "config": {
-                    "wait_for_processes": False,
+            overrides={
+                "run_coordinator": {
+                    "module": "dagster.core.run_coordinator",
+                    "class": "QueuedRunCoordinator",
                 },
-            },
-        }
-    ) as instance:
+                "run_launcher": {
+                    "class": "DefaultRunLauncher",
+                    "module": "dagster.core.launcher.default_run_launcher",
+                    "config": {
+                        "wait_for_processes": False,
+                    },
+                },
+            }
+        ) as instance:
         with get_example_repo(instance) as repo:
 
             external_schedule = repo.get_external_schedule("always_run_schedule")
@@ -93,10 +93,10 @@ def test_no_memory_leaks():
             instance.start_sensor(external_sensor)
 
             with daemon_controller_from_instance(
-                instance,
-                workspace_load_target=workspace_load_target(),
-                wait_for_processes_on_exit=True,
-            ) as controller:
+                            instance,
+                            workspace_load_target=workspace_load_target(),
+                            wait_for_processes_on_exit=True,
+                        ) as controller:
                 start_time = time.time()
 
                 growth = objgraph.growth(
@@ -127,4 +127,4 @@ def test_no_memory_leaks():
                             + str(growth)
                         )
 
-                    print("Growth: " + str(growth))  # pylint: disable=print-call
+                    print(f"Growth: {str(growth)}")

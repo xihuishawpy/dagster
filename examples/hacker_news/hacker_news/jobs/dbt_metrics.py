@@ -8,7 +8,7 @@ from dagster import ResourceDefinition, graph
 from dagster.utils import file_relative_path
 
 DBT_PROJECT_DIR = file_relative_path(__file__, "../../hacker_news_dbt")
-DBT_PROFILES_DIR = DBT_PROJECT_DIR + "/config"
+DBT_PROFILES_DIR = f"{DBT_PROJECT_DIR}/config"
 dbt_staging_resource = dbt_cli_resource.configured(
     {"profiles-dir": DBT_PROFILES_DIR, "project-dir": DBT_PROJECT_DIR, "target": "staging"}
 )

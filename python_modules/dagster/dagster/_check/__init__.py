@@ -816,11 +816,7 @@ def list_elem(
     value = ddict.get(key)
 
     if isinstance(value, list):
-        if not of_type:
-            return value
-
-        return _check_iterable_items(value, of_type, "list")
-
+        return _check_iterable_items(value, of_type, "list") if of_type else value
     raise _element_check_error(key, value, ddict, list, additional_message)
 
 
@@ -942,7 +938,7 @@ def opt_nullable_mapping_param(
 def not_none_param(
     obj: Optional[T], param_name: str, additional_message: Optional[str] = None
 ) -> T:
-    additional_message = " " + additional_message if additional_message else ""
+    additional_message = f" {additional_message}" if additional_message else ""
     if obj is None:
         raise _param_invariant_exception(
             param_name, f"Param {param_name} cannot be none.{additional_message}"
@@ -1179,7 +1175,7 @@ def opt_set_param(
     """
     if obj is None:
         return cast(T_Set, frozenset())
-    elif obj is not None and not isinstance(obj, (frozenset, set)):
+    elif not isinstance(obj, (frozenset, set)):
         raise _param_type_mismatch_exception(obj, (frozenset, set), param_name, additional_message)
     elif not of_type:
         return cast(T_Set, obj)
@@ -1414,7 +1410,7 @@ def _check_tuple_items(
     if of_shape is not None:
         len_tuple = len(obj_tuple)
         len_type = len(of_shape)
-        if not len_tuple == len_type:
+        if len_tuple != len_type:
             raise CheckError(
                 f"Tuple mismatches type: tuple had {len_tuple} members but type had " f"{len_type}"
             )
@@ -1505,7 +1501,7 @@ def _element_check_error(
     ttype: TypeOrTupleOfTypes,
     additional_message: Optional[str] = None,
 ) -> ElementCheckError:
-    additional_message = " " + additional_message if additional_message else ""
+    additional_message = f" {additional_message}" if additional_message else ""
     return ElementCheckError(
         f"Value {repr(value)} from key {key} is not a {repr(ttype)}. Dict: {repr(ddict)}."
         f"{additional_message}"
@@ -1518,18 +1514,17 @@ def _param_type_mismatch_exception(
     param_name: str,
     additional_message: Optional[str] = None,
 ) -> ParameterCheckError:
-    additional_message = " " + additional_message if additional_message else ""
-    if isinstance(ttype, tuple):
-        type_names = sorted([t.__name__ for t in ttype])
-        return ParameterCheckError(
-            f'Param "{param_name}" is not one of {type_names}. Got {repr(obj)} which is type {type(obj)}.'
-            f"{additional_message}"
-        )
-    else:
+    additional_message = f" {additional_message}" if additional_message else ""
+    if not isinstance(ttype, tuple):
         return ParameterCheckError(
             f'Param "{param_name}" is not a {ttype.__name__}. Got {repr(obj)} which is type {type(obj)}.'
             f"{additional_message}"
         )
+    type_names = sorted([t.__name__ for t in ttype])
+    return ParameterCheckError(
+        f'Param "{param_name}" is not one of {type_names}. Got {repr(obj)} which is type {type(obj)}.'
+        f"{additional_message}"
+    )
 
 
 def _param_class_mismatch_exception(
@@ -1539,8 +1534,8 @@ def _param_class_mismatch_exception(
     optional: bool,
     additional_message: Optional[str] = None,
 ) -> ParameterCheckError:
-    additional_message = " " + additional_message if additional_message else ""
-    opt_clause = optional and "be None or" or ""
+    additional_message = f" {additional_message}" if additional_message else ""
+    opt_clause = "be None or" if optional else ""
     subclass_clause = superclass and f"that inherits from {superclass.__name__}" or ""
     return ParameterCheckError(
         f'Param "{param_name}" must {opt_clause}be a class{subclass_clause}. Got {repr(obj)} of type {type(obj)}.'
@@ -1557,7 +1552,7 @@ def _type_mismatch_error(
         else f"not a {ttype.__name__}"
     )
     repr_obj = repr(obj)
-    additional_message = " " + additional_message if additional_message else ""
+    additional_message = f" {additional_message}" if additional_message else ""
     return CheckError(
         f"Object {repr_obj} is {type_message}. Got {repr_obj} with type {type(obj)}.{additional_message}"
     )
@@ -1566,7 +1561,7 @@ def _type_mismatch_error(
 def _param_not_callable_exception(
     obj: Any, param_name: str, additional_message: Optional[str] = None
 ) -> ParameterCheckError:
-    additional_message = " " + additional_message if additional_message else ""
+    additional_message = f" {additional_message}" if additional_message else ""
     return ParameterCheckError(
         f'Param "{param_name}" is not callable. Got {repr(obj)} with type {type(obj)}.'
         f"{additional_message}"

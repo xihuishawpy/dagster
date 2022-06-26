@@ -87,8 +87,10 @@ def build_schedule_from_partitioned_job(
 
     cron_schedule = get_cron_schedule(partitions_def.schedule_type, execution_time, execution_day)
 
-    schedule_def = partition_set.create_schedule_definition(
-        schedule_name=check.opt_str_param(name, "name", f"{job.name}_schedule"),
+    return partition_set.create_schedule_definition(
+        schedule_name=check.opt_str_param(
+            name, "name", f"{job.name}_schedule"
+        ),
         cron_schedule=cron_schedule,
         partition_selector=latest_window_partition_selector,
         execution_timezone=partitions_def.timezone,
@@ -96,8 +98,6 @@ def build_schedule_from_partitioned_job(
         job=job,
         default_status=default_status,
     )
-
-    return schedule_def
 
 
 schedule_from_partitions = build_schedule_from_partitioned_job
@@ -110,7 +110,4 @@ def latest_window_partition_selector(
     exists as of the schedule tick time.
     """
     partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
-    if len(partitions) == 0:
-        return SkipReason()
-    else:
-        return partitions[-1]
+    return SkipReason() if len(partitions) == 0 else partitions[-1]

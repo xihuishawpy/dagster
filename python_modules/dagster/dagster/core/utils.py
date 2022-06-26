@@ -21,12 +21,11 @@ PYTHON_LOGGING_LEVELS_MAPPING = frozendict(
 PYTHON_LOGGING_LEVELS_ALIASES = frozendict(OrderedDict({"FATAL": "CRITICAL", "WARN": "WARNING"}))
 
 PYTHON_LOGGING_LEVELS_NAMES = frozenset(
-    [
-        level_name.lower()
-        for level_name in sorted(
-            list(PYTHON_LOGGING_LEVELS_MAPPING.keys()) + list(PYTHON_LOGGING_LEVELS_ALIASES.keys())
-        )
-    ]
+    level_name.lower()
+    for level_name in sorted(
+        list(PYTHON_LOGGING_LEVELS_MAPPING.keys())
+        + list(PYTHON_LOGGING_LEVELS_ALIASES.keys())
+    )
 )
 
 
@@ -41,10 +40,14 @@ def coerce_valid_log_level(log_level: Union[str, int]) -> int:
         "Bad value for log level {level}: permissible values are {levels}.".format(
             level=log_level,
             levels=", ".join(
-                ["'{}'".format(level_name.upper()) for level_name in PYTHON_LOGGING_LEVELS_NAMES]
+                [
+                    f"'{level_name.upper()}'"
+                    for level_name in PYTHON_LOGGING_LEVELS_NAMES
+                ]
             ),
         ),
     )
+
     log_level = PYTHON_LOGGING_LEVELS_ALIASES.get(log_level.upper(), log_level.upper())
     return PYTHON_LOGGING_LEVELS_MAPPING[log_level]
 
@@ -64,7 +67,10 @@ def make_new_run_id() -> str:
 
 
 def make_new_backfill_id():
-    return "".join(random.choice(string.ascii_lowercase) for x in range(BACKFILL_TAG_LENGTH))
+    return "".join(
+        random.choice(string.ascii_lowercase)
+        for _ in range(BACKFILL_TAG_LENGTH)
+    )
 
 
 def str_format_list(items):
@@ -77,9 +83,8 @@ def str_format_set(items):
 
 def check_dagster_package_version(library_name, library_version):
     if __version__ != library_version:
-        message = "Found version mismatch between `dagster` ({}) and `{}` ({})".format(
-            __version__, library_name, library_version
-        )
+        message = f"Found version mismatch between `dagster` ({__version__}) and `{library_name}` ({library_version})"
+
         warnings.warn(message)
 
 
@@ -89,6 +94,6 @@ def parse_env_var(env_var_str: str) -> Tuple[str, str]:
         return (split[0], split[1])
     else:
         env_var_value = os.getenv(env_var_str)
-        if env_var_value == None:
+        if env_var_value is None:
             raise Exception(f"Tried to load environment variable {env_var_str}, but it was not set")
         return (env_var_str, cast(str, env_var_value))

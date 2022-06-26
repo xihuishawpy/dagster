@@ -85,7 +85,7 @@ def airflow_extra_cmds(version: str, _) -> List[str]:
         "aws ecr get-login --no-include-email --region us-west-2 | sh",
         r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json "
         + GCP_CREDS_LOCAL_FILE,
-        "export GOOGLE_APPLICATION_CREDENTIALS=" + GCP_CREDS_LOCAL_FILE,
+        f"export GOOGLE_APPLICATION_CREDENTIALS={GCP_CREDS_LOCAL_FILE}",
         "pushd python_modules/libraries/dagster-airflow/dagster_airflow_tests/",
         "docker-compose up -d --remove-orphans",
         *network_buildkite_container("postgres"),
@@ -287,8 +287,9 @@ def k8s_extra_cmds(version: str, _) -> List[str]:
 gcp_extra_cmds = [
     r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json "
     + GCP_CREDS_LOCAL_FILE,
-    "export GOOGLE_APPLICATION_CREDENTIALS=" + GCP_CREDS_LOCAL_FILE,
+    f"export GOOGLE_APPLICATION_CREDENTIALS={GCP_CREDS_LOCAL_FILE}",
 ]
+
 
 
 postgres_extra_cmds = [

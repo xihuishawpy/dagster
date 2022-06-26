@@ -95,7 +95,7 @@ def _is_path_only_diff(paths: Tuple[str, ...]) -> bool:
 
     try:
         pr_commit = safe_getenv("BUILDKITE_COMMIT")
-        origin_base = "origin/" + base_branch
+        origin_base = f"origin/{base_branch}"
         diff_files = (
             subprocess.check_output(["git", "diff", origin_base, pr_commit, "--name-only"])
             .decode("utf-8")

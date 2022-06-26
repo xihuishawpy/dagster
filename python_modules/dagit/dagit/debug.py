@@ -31,7 +31,7 @@ from .version import __version__
 def dagit_debug_command(input_files, port):
     debug_payloads = []
     for input_file in input_files:
-        click.echo("Loading {} ...".format(input_file))
+        click.echo(f"Loading {input_file} ...")
         with GzipFile(input_file, "rb") as file:
             blob = file.read().decode("utf-8")
             debug_payload = deserialize_json_to_dagster_namedtuple(blob)
@@ -39,10 +39,9 @@ def dagit_debug_command(input_files, port):
             check.invariant(isinstance(debug_payload, DebugRunPayload))
 
             click.echo(
-                "\trun_id: {} \n\tdagster version: {}".format(
-                    debug_payload.pipeline_run.run_id, debug_payload.version
-                )
+                f"\trun_id: {debug_payload.pipeline_run.run_id} \n\tdagster version: {debug_payload.version}"
             )
+
             debug_payloads.append(debug_payload)
 
     instance = DagsterInstance.ephemeral(preload=debug_payloads)

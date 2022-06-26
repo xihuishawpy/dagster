@@ -209,33 +209,37 @@ def execute_run(
         raise DagsterInvariantViolationError(message)
 
     check.invariant(
-        pipeline_run.status == PipelineRunStatus.NOT_STARTED
-        or pipeline_run.status == PipelineRunStatus.STARTING,
-        desc="Run {} ({}) in state {}, expected NOT_STARTED or STARTING".format(
-            pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
-        ),
+        pipeline_run.status
+        in [PipelineRunStatus.NOT_STARTED, PipelineRunStatus.STARTING],
+        desc=f"Run {pipeline_run.pipeline_name} ({pipeline_run.run_id}) in state {pipeline_run.status}, expected NOT_STARTED or STARTING",
     )
+
     pipeline_def = pipeline.get_definition()
-    if pipeline_run.solids_to_execute or pipeline_run.asset_selection:
-        if isinstance(pipeline_def, PipelineSubsetDefinition):
-            check.invariant(
-                pipeline_run.solids_to_execute == pipeline.solids_to_execute,
-                "Cannot execute PipelineRun with solids_to_execute {solids_to_execute} that "
-                "conflicts with pipeline subset {pipeline_solids_to_execute}.".format(
-                    pipeline_solids_to_execute=str_format_set(pipeline.solids_to_execute),
-                    solids_to_execute=str_format_set(pipeline_run.solids_to_execute),
-                ),
-            )
-        else:
-            # when `execute_run` is directly called, the sub pipeline hasn't been created
-            # note that when we receive the solids to execute via PipelineRun, it won't support
-            # solid selection query syntax
-            pipeline = pipeline.subset_for_execution_from_existing_pipeline(
-                frozenset(pipeline_run.solids_to_execute)
-                if pipeline_run.solids_to_execute
-                else None,
-                pipeline_run.asset_selection,
-            )
+    if (
+        pipeline_run.solids_to_execute
+        and isinstance(pipeline_def, PipelineSubsetDefinition)
+        or not pipeline_run.solids_to_execute
+        and pipeline_run.asset_selection
+        and isinstance(pipeline_def, PipelineSubsetDefinition)
+    ):
+        check.invariant(
+            pipeline_run.solids_to_execute == pipeline.solids_to_execute,
+            "Cannot execute PipelineRun with solids_to_execute {solids_to_execute} that "
+            "conflicts with pipeline subset {pipeline_solids_to_execute}.".format(
+                pipeline_solids_to_execute=str_format_set(pipeline.solids_to_execute),
+                solids_to_execute=str_format_set(pipeline_run.solids_to_execute),
+            ),
+        )
+    elif pipeline_run.solids_to_execute or pipeline_run.asset_selection:
+        # when `execute_run` is directly called, the sub pipeline hasn't been created
+        # note that when we receive the solids to execute via PipelineRun, it won't support
+        # solid selection query syntax
+        pipeline = pipeline.subset_for_execution_from_existing_pipeline(
+            frozenset(pipeline_run.solids_to_execute)
+            if pipeline_run.solids_to_execute
+            else None,
+            pipeline_run.asset_selection,
+        )
 
     execution_plan = _get_execution_plan_from_run(pipeline, pipeline_run, instance)
     output_capture: Optional[Dict[StepOutputHandle, Any]] = {}
@@ -874,9 +878,9 @@ def pipeline_execution_iterator(
             )
         elif failed_steps:
             event = DagsterEvent.pipeline_failure(
-                pipeline_context,
-                "Steps failed: {}.".format(failed_steps),
+                pipeline_context, f"Steps failed: {failed_steps}."
             )
+
         else:
             event = DagsterEvent.pipeline_success(pipeline_context)
         if not generator_closed:
@@ -951,11 +955,12 @@ def _check_execute_pipeline_args(
     check.opt_str_param(mode, "mode")
     check.opt_str_param(preset, "preset")
     check.invariant(
-        not (mode is not None and preset is not None),
+        mode is None or preset is None,
         "You may set only one of `mode` (got {mode}) or `preset` (got {preset}).".format(
             mode=mode, preset=preset
         ),
     )
+
 
     tags = check.opt_dict_param(tags, "tags", key_type=str)
     check.opt_list_param(solid_selection, "solid_selection", of_type=str)
@@ -995,19 +1000,7 @@ def _check_execute_pipeline_args(
 
         tags = merge_dicts(pipeline_preset.tags, tags)
 
-    if mode is not None:
-        if not pipeline_def.has_mode_definition(mode):
-            raise DagsterInvariantViolationError(
-                (
-                    "You have attempted to execute pipeline {name} with mode {mode}. "
-                    "Available modes: {modes}"
-                ).format(
-                    name=pipeline_def.name,
-                    mode=mode,
-                    modes=pipeline_def.available_modes,
-                )
-            )
-    else:
+    if mode is None:
         if pipeline_def.is_multi_mode:
             raise DagsterInvariantViolationError(
                 (
@@ -1018,6 +1011,17 @@ def _check_execute_pipeline_args(
             )
         mode = pipeline_def.get_default_mode_name()
 
+    elif not pipeline_def.has_mode_definition(mode):
+        raise DagsterInvariantViolationError(
+            (
+                "You have attempted to execute pipeline {name} with mode {mode}. "
+                "Available modes: {modes}"
+            ).format(
+                name=pipeline_def.name,
+                mode=mode,
+                modes=pipeline_def.available_modes,
+            )
+        )
     tags = merge_dicts(pipeline_def.tags, tags)
 
     # generate pipeline subset from the given solid_selection
@@ -1054,7 +1058,7 @@ def _resolve_reexecute_step_selection(
         known_state=state,
     )
     step_keys_to_execute = parse_step_selection(parent_plan.get_all_step_deps(), step_selection)
-    execution_plan = create_execution_plan(
+    return create_execution_plan(
         pipeline,
         run_config,
         mode,
@@ -1062,4 +1066,3 @@ def _resolve_reexecute_step_selection(
         known_state=state.update_for_step_selection(step_keys_to_execute),
         tags=parent_pipeline_run.tags,
     )
-    return execution_plan

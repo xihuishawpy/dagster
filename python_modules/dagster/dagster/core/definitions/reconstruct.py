@@ -109,7 +109,7 @@ class ReconstructableRepository(
 
     def get_python_origin(self):
         return RepositoryPythonOrigin(
-            executable_path=self.executable_path if self.executable_path else sys.executable,
+            executable_path=self.executable_path or sys.executable,
             code_pointer=self.pointer,
             container_image=self.container_image,
             entry_point=self.entry_point,
@@ -527,14 +527,13 @@ def build_reconstructable_job(
     )
 
     reconstructable_args = list(check.opt_tuple_param(reconstructable_args, "reconstructable_args"))
-    reconstructable_kwargs = list(
-        (
-            [key, value]
-            for key, value in check.opt_dict_param(
-                reconstructable_kwargs, "reconstructable_kwargs", key_type=str
-            ).items()
-        )
-    )
+    reconstructable_kwargs = [
+        [key, value]
+        for key, value in check.opt_dict_param(
+            reconstructable_kwargs, "reconstructable_kwargs", key_type=str
+        ).items()
+    ]
+
 
     reconstructor_pointer = ModuleCodePointer(
         reconstructor_module_name,

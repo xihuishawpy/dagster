@@ -113,7 +113,7 @@ def test_graphql_invalid_json(instance, test_client: TestClient):  # pylint: dis
         "/graphql", data='{"query": "foo}', headers={"Content-Type": "application/json"}
     )
 
-    print(str(response.text))
+    print(response.text)
 
     assert response.status_code == 400, response.text
     assert 'GraphQL request is invalid JSON:\n{"query": "foo}' in response.text

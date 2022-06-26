@@ -28,27 +28,25 @@ class AvailablePythonVersion(str, Enum):
         commit_message = safe_getenv("BUILDKITE_MESSAGE")
         if branch_name == "master" or is_release_branch(branch_name):
             return cls.get_all()
-        else:
+        # environment variable-specified defaults
+        # branch name or commit message-specified defaults
+        test_pythons = os.environ.get("TEST_PYTHON_VERSIONS", "")
 
-            # environment variable-specified defaults
-            # branch name or commit message-specified defaults
-            test_pythons = os.environ.get("TEST_PYTHON_VERSIONS", "")
+        env_vars = [branch_name, commit_message, test_pythons]
 
-            env_vars = [branch_name, commit_message, test_pythons]
+        specified_versions: List[AvailablePythonVersion] = []
+        for version in cls.get_all():
+            marker = f"test-{cls.to_tox_factor(version)}"
+            if any(marker in v for v in env_vars):
+                specified_versions.append(version)
+        if any("test-all" in v for v in env_vars):
+            specified_versions += cls.get_all()
 
-            specified_versions: List[AvailablePythonVersion] = []
-            for version in cls.get_all():
-                marker = f"test-{cls.to_tox_factor(version)}"
-                if any(marker in v for v in env_vars):
-                    specified_versions.append(version)
-            if any("test-all" in v for v in env_vars):
-                specified_versions += cls.get_all()
-
-            return (
-                list(set(specified_versions))
-                if len(specified_versions) > 0
-                else [cls.get_default()]
-            )
+        return (
+            list(set(specified_versions))
+            if len(specified_versions) > 0
+            else [cls.get_default()]
+        )
 
     @classmethod
     def from_major_minor(cls, major: int, minor: int) -> "AvailablePythonVersion":

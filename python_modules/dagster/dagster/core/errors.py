@@ -471,7 +471,7 @@ class DagsterEventLogInvalidForRun(DagsterError):
     def __init__(self, run_id):
         self.run_id = check.str_param(run_id, "run_id")
         super(DagsterEventLogInvalidForRun, self).__init__(
-            "Event logs invalid for run id {}".format(run_id)
+            f"Event logs invalid for run id {run_id}"
         )
 
 

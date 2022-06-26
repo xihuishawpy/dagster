@@ -58,9 +58,7 @@ class TimeWindowPartitionMapping(PartitionMapping):
         to_partitions_def: PartitionsDefinition,
         from_partition_key_range: PartitionKeyRange,
     ) -> PartitionKeyRange:
-        if not isinstance(from_partitions_def, TimeWindowPartitionsDefinition) or not isinstance(
-            from_partitions_def, TimeWindowPartitionsDefinition
-        ):
+        if not isinstance(from_partitions_def, TimeWindowPartitionsDefinition):
             raise DagsterInvalidDefinitionError(
                 "TimeWindowPartitionMappings can only operate on TimeWindowPartitionsDefinitions"
             )

@@ -15,8 +15,8 @@ def run_cli():
 def run_list_command(limit):
     with DagsterInstance.get() as instance:
         for run in instance.get_runs(limit=limit):
-            click.echo("Run: {}".format(run.run_id))
-            click.echo("     Pipeline: {}".format(run.pipeline_name))
+            click.echo(f"Run: {run.run_id}")
+            click.echo(f"     Pipeline: {run.pipeline_name}")
 
 
 @run_cli.command(
@@ -64,9 +64,8 @@ def run_wipe_command(force):
         )
         should_delete_run = confirmation == "DELETE"
 
-    if should_delete_run:
-        with DagsterInstance.get() as instance:
-            instance.wipe()
-        click.echo("Deleted all run history and event logs.")
-    else:
+    if not should_delete_run:
         raise click.ClickException("Exiting without deleting all run history and event logs.")
+    with DagsterInstance.get() as instance:
+        instance.wipe()
+    click.echo("Deleted all run history and event logs.")

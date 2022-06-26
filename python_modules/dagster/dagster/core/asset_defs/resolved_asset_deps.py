@@ -56,7 +56,7 @@ def resolve_assets_def_deps(
     """
     group_names_by_key: Dict[AssetKey, str] = {}
     for assets_def in assets_defs:
-        group_names_by_key.update(assets_def.group_names_by_key)
+        group_names_by_key |= assets_def.group_names_by_key
     for source_asset in source_assets:
         group_names_by_key[source_asset.key] = source_asset.group_name
 

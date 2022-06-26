@@ -98,10 +98,11 @@ def test_execute_on_celery_k8s_default(  # pylint: disable=redefined-outer-name
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == dagster_docker_image
@@ -127,10 +128,11 @@ def test_execute_on_celery_k8s_job_api(  # pylint: disable=redefined-outer-name
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == dagster_docker_image
@@ -160,10 +162,11 @@ def test_execute_on_celery_k8s_job_api_with_legacy_configmap_set(  # pylint: dis
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == dagster_docker_image
@@ -189,10 +192,11 @@ def test_execute_on_celery_k8s_image_from_origin(  # pylint: disable=redefined-o
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     updated_run = dagster_instance.get_run_by_id(run_id)
     assert updated_run.tags[DOCKER_IMAGE_TAG] == dagster_docker_image
@@ -221,10 +225,11 @@ def test_execute_subset_on_celery_k8s(  # pylint: disable=redefined-outer-name
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
 
 def test_execute_on_celery_k8s_retry_pipeline(  # pylint: disable=redefined-outer-name
@@ -242,10 +247,11 @@ def test_execute_on_celery_k8s_retry_pipeline(  # pylint: disable=redefined-oute
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
     stats = dagster_instance.get_run_stats(run_id)
     assert stats.steps_succeeded == 1
@@ -294,10 +300,11 @@ def test_execute_on_celery_k8s_with_resource_requirements(  # pylint: disable=re
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
 
 def _test_termination(dagit_url, dagster_instance, run_config):
@@ -390,7 +397,7 @@ def _test_termination(dagit_url, dagster_instance, run_config):
 
     s3 = boto3.resource("s3", region_name="us-west-1", use_ssl=True, endpoint_url=None).meta.client
     bucket = "dagster-scratch-80542c2"
-    key = "resource_termination_test/{}".format(run_id)
+    key = f"resource_termination_test/{run_id}"
     assert s3.get_object(Bucket=bucket, Key=key)
 
 
@@ -483,13 +490,13 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
     while datetime.datetime.now() < start_time + timeout:
         event_records = dagster_instance.all_logs(run_id)
         for event_record in event_records:
-            if event_record.dagster_event:
-                if (
-                    event_record.dagster_event.event_type == DagsterEventType.STEP_FAILURE
-                    and event_record.dagster_event.step_key == "hard_fail_or_0"
-                ):
-                    step_failure_found = True
-                    break
+            if event_record.dagster_event and (
+                event_record.dagster_event.event_type
+                == DagsterEventType.STEP_FAILURE
+                and event_record.dagster_event.step_key == "hard_fail_or_0"
+            ):
+                step_failure_found = True
+                break
         time.sleep(5)
     assert step_failure_found
 
@@ -529,10 +536,11 @@ def test_memoization_on_celery_k8s(  # pylint: disable=redefined-outer-name
             )
 
             result = wait_for_job_and_get_raw_logs(
-                job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+                job_name=f"dagster-run-{run_id}", namespace=helm_namespace
             )
 
-            assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+            assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
             run_ids.append(run_id)
 
@@ -567,7 +575,8 @@ def test_volume_mounts(dagster_docker_image, dagster_instance, helm_namespace, d
     )
 
     result = wait_for_job_and_get_raw_logs(
-        job_name="dagster-run-%s" % run_id, namespace=helm_namespace
+        job_name=f"dagster-run-{run_id}", namespace=helm_namespace
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"

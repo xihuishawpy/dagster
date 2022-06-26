@@ -249,11 +249,11 @@ class PipelineDefinition:
             asset_layer, "asset_layer", AssetLayer, default=AssetLayer.from_graph(self.graph)
         )
 
-        resource_requirements = {}
-        for mode_def in self._mode_definitions:
-            resource_requirements[mode_def.name] = self._get_resource_requirements_for_mode(
-                mode_def
-            )
+        resource_requirements = {
+            mode_def.name: self._get_resource_requirements_for_mode(mode_def)
+            for mode_def in self._mode_definitions
+        }
+
         self._resource_requirements = resource_requirements
 
         # Recursively explore all nodes in the this pipeline
@@ -353,11 +353,14 @@ class PipelineDefinition:
 
     def _get_mode_definition(self, mode: str) -> Optional[ModeDefinition]:
         check.str_param(mode, "mode")
-        for mode_definition in self._mode_definitions:
-            if mode_definition.name == mode:
-                return mode_definition
-
-        return None
+        return next(
+            (
+                mode_definition
+                for mode_definition in self._mode_definitions
+                if mode_definition.name == mode
+            ),
+            None,
+        )
 
     def get_default_mode(self) -> ModeDefinition:
         return self._mode_definitions[0]
@@ -424,7 +427,7 @@ class PipelineDefinition:
     def solid_def_named(self, name: str) -> NodeDefinition:
         check.str_param(name, "name")
 
-        check.invariant(name in self._all_node_defs, "{} not found".format(name))
+        check.invariant(name in self._all_node_defs, f"{name} not found")
         return self._all_node_defs[name]
 
     def has_solid_def(self, name: str) -> bool:
@@ -713,7 +716,7 @@ def _get_pipeline_subset_def(
             # else input is unconnected
 
     try:
-        sub_pipeline_def = PipelineSubsetDefinition(
+        return PipelineSubsetDefinition(
             name=pipeline_def.name,  # should we change the name for subsetted pipeline?
             solid_defs=list({solid.definition for solid in solids}),
             mode_defs=pipeline_def.mode_definitions,
@@ -723,7 +726,6 @@ def _get_pipeline_subset_def(
             hook_defs=pipeline_def.hook_defs,
         )
 
-        return sub_pipeline_def
     except DagsterInvalidDefinitionError as exc:
         # This handles the case when you construct a subset such that an unsatisfied
         # input cannot be loaded from config. Instead of throwing a DagsterInvalidDefinitionError,

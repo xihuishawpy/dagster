@@ -31,7 +31,7 @@ from .snap import ConfigFieldSnap, ConfigSchemaSnapshot, ConfigTypeSnap
 from .stack import EvaluationStack
 from .traversal_context import ValidationContext
 
-VALID_FLOAT_TYPES = tuple([int, float])
+VALID_FLOAT_TYPES = int, float
 
 T = TypeVar("T")
 
@@ -51,7 +51,7 @@ def is_config_scalar_valid(config_type_snap: ConfigTypeSnap, config_value: objec
         # historical snapshot without scalar kind. do no validation
         return True
     else:
-        check.failed("Not a supported scalar {}".format(config_type_snap))
+        check.failed(f"Not a supported scalar {config_type_snap}")
 
 
 def validate_config(config_schema: object, config_value: object) -> EvaluateValueResult:
@@ -102,9 +102,14 @@ def _validate_config(context: ValidationContext, config_value: object) -> Evalua
         return EvaluateValueResult.for_error(create_none_not_allowed_error(context))
 
     if kind == ConfigTypeKind.SCALAR:
-        if not is_config_scalar_valid(context.config_type_snap, config_value):
-            return EvaluateValueResult.for_error(create_scalar_error(context, config_value))
-        return EvaluateValueResult.for_value(config_value)
+        return (
+            EvaluateValueResult.for_value(config_value)
+            if is_config_scalar_valid(context.config_type_snap, config_value)
+            else EvaluateValueResult.for_error(
+                create_scalar_error(context, config_value)
+            )
+        )
+
     elif kind == ConfigTypeKind.SELECTOR:
         return validate_selector_config(context, config_value)
     elif kind == ConfigTypeKind.STRICT_SHAPE:
@@ -120,7 +125,7 @@ def _validate_config(context: ValidationContext, config_value: object) -> Evalua
     elif kind == ConfigTypeKind.SCALAR_UNION:
         return _validate_scalar_union_config(context, config_value)
     else:
-        check.failed("Unsupported ConfigTypeKind {}".format(kind))
+        check.failed(f"Unsupported ConfigTypeKind {kind}")
 
 
 def _validate_scalar_union_config(
@@ -130,7 +135,7 @@ def _validate_scalar_union_config(
     check.param_invariant(context.config_type_snap.kind == ConfigTypeKind.SCALAR_UNION, "context")
     check.not_none_param(config_value, "config_value")
 
-    if isinstance(config_value, dict) or isinstance(config_value, list):
+    if isinstance(config_value, (dict, list)):
         return _validate_config(
             context.for_new_config_type_key(context.config_type_snap.non_scalar_type_key),
             cast(T, config_value),
@@ -346,9 +351,7 @@ def _append_if_error(errors: List[EvaluationError], maybe_error: Optional[Evalua
 def _check_for_extra_incoming_fields(
     context: ValidationContext, defined_field_names: Set[str], incoming_field_names: Set[str]
 ) -> Optional[EvaluationError]:
-    extra_fields = list(incoming_field_names - defined_field_names)
-
-    if extra_fields:
+    if extra_fields := list(incoming_field_names - defined_field_names):
         if len(extra_fields) == 1:
             return create_field_not_defined_error(context, extra_fields[0])
         else:
@@ -367,9 +370,12 @@ def _compute_missing_fields_error(
     for field_snap in field_snaps:
 
         field_alias = field_aliases.get(cast(str, field_snap.name))
-        if field_snap.is_required and field_snap.name not in incoming_fields:
-            if field_alias is None or field_alias not in incoming_fields:
-                missing_fields.append(cast(str, field_snap.name))
+        if (
+            field_snap.is_required
+            and field_snap.name not in incoming_fields
+            and (field_alias is None or field_alias not in incoming_fields)
+        ):
+            missing_fields.append(cast(str, field_snap.name))
 
     if missing_fields:
         if len(missing_fields) == 1:

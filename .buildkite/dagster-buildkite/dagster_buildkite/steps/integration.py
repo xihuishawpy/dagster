@@ -199,13 +199,9 @@ def default_integration_suite_pytest_extra_cmds(version: str, _) -> List[str]:
         "aws ecr get-login --no-include-email --region us-west-2 | sh",
         r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json "
         + GCP_CREDS_LOCAL_FILE,
-        "export GOOGLE_APPLICATION_CREDENTIALS=" + GCP_CREDS_LOCAL_FILE,
+        f"export GOOGLE_APPLICATION_CREDENTIALS={GCP_CREDS_LOCAL_FILE}",
         "pushd python_modules/libraries/dagster-celery",
-        # Run the rabbitmq db. We are in docker running docker
-        # so this will be a sibling container.
-        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
-        # Can't use host networking on buildkite and communicate via localhost
-        # between these sibling containers, so pass along the ip.
+        "docker-compose up -d --remove-orphans",
         *network_buildkite_container("rabbitmq"),
         *connect_sibling_docker_container(
             "rabbitmq", "test-rabbitmq", "DAGSTER_CELERY_BROKER_HOST"

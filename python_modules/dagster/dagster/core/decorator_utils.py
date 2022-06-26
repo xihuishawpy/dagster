@@ -35,12 +35,15 @@ def validate_expected_params(
     params: List[funcsigs.Parameter], expected_params: List[str]
 ) -> Optional[str]:
     """Returns first missing positional, if any, otherwise None"""
-    expected_idx = 0
-    for expected_param in expected_params:
-        if expected_idx >= len(params) or not _is_param_valid(params[expected_idx], expected_param):
-            return expected_param
-        expected_idx += 1
-    return None
+    return next(
+        (
+            expected_param
+            for expected_idx, expected_param in enumerate(expected_params)
+            if expected_idx >= len(params)
+            or not _is_param_valid(params[expected_idx], expected_param)
+        ),
+        None,
+    )
 
 
 def is_required_param(param: funcsigs.Parameter) -> bool:
@@ -60,18 +63,17 @@ def param_is_var_keyword(param: funcsigs.Parameter) -> bool:
 
 
 def format_docstring_for_description(fn: Callable) -> Optional[str]:
-    if fn.__doc__ is not None:
-        docstring = fn.__doc__
-        if len(docstring) > 0 and docstring[0].isspace():
-            return textwrap.dedent(docstring).strip()
-        else:
-            first_newline_pos = docstring.find("\n")
-            if first_newline_pos == -1:
-                return docstring
-            else:
-                return (
-                    docstring[: first_newline_pos + 1]
-                    + textwrap.dedent(docstring[first_newline_pos + 1 :]).strip()
-                )
-    else:
+    if fn.__doc__ is None:
         return None
+    docstring = fn.__doc__
+    if len(docstring) > 0 and docstring[0].isspace():
+        return textwrap.dedent(docstring).strip()
+    first_newline_pos = docstring.find("\n")
+    return (
+        docstring
+        if first_newline_pos == -1
+        else (
+            docstring[: first_newline_pos + 1]
+            + textwrap.dedent(docstring[first_newline_pos + 1 :]).strip()
+        )
+    )

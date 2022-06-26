@@ -278,9 +278,10 @@ class _Asset:
             out = Out(
                 metadata=self.metadata or {},
                 io_manager_key=io_manager_key,
-                dagster_type=self.dagster_type if self.dagster_type else NoValueSentinel,
+                dagster_type=self.dagster_type or NoValueSentinel,
                 description=self.description,
             )
+
 
             op = _Op(
                 name="__".join(out_asset_key.path).replace("-", "_"),
@@ -571,7 +572,7 @@ def _make_asset_keys(deps: Optional[Union[Set[AssetKey], Set[str]]]) -> Optional
     if deps is None:
         return deps
 
-    deps_asset_keys = {
-        AssetKey.from_user_string(dep) if isinstance(dep, str) else dep for dep in deps
+    return {
+        AssetKey.from_user_string(dep) if isinstance(dep, str) else dep
+        for dep in deps
     }
-    return deps_asset_keys

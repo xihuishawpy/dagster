@@ -66,12 +66,7 @@ class LoggerDefinition(AnonymousConfigurableDefinition):
                 UnboundInitLoggerContext,
                 default=UnboundInitLoggerContext(logger_config=None, pipeline_def=None),
             )
-            return logger_invocation_result(self, context)
-        else:
-            if context_param_name not in kwargs:
-                raise DagsterInvalidInvocationError(
-                    f"Logger initialization expected argument '{context_param_name}'."
-                )
+        elif context_param_name in kwargs:
             context = check.opt_inst_param(
                 kwargs[context_param_name],
                 context_param_name,
@@ -79,7 +74,11 @@ class LoggerDefinition(AnonymousConfigurableDefinition):
                 default=UnboundInitLoggerContext(logger_config=None, pipeline_def=None),
             )
 
-            return logger_invocation_result(self, context)
+        else:
+            raise DagsterInvalidInvocationError(
+                f"Logger initialization expected argument '{context_param_name}'."
+            )
+        return logger_invocation_result(self, context)
 
     @property
     def logger_fn(self) -> "InitLoggerFunction":

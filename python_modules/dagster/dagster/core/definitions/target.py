@@ -36,7 +36,10 @@ class DirectTarget(
             target, "target", (GraphDefinition, PipelineDefinition, UnresolvedAssetJobDefinition)
         )
 
-        if isinstance(target, PipelineDefinition) and not len(target.mode_definitions) == 1:
+        if (
+            isinstance(target, PipelineDefinition)
+            and len(target.mode_definitions) != 1
+        ):
             check.failed(
                 "Only graphs, jobs, and single-mode pipelines are valid "
                 "execution targets from a schedule or sensor. Please see the "

@@ -401,26 +401,23 @@ class AssetGroup:
                 None
             }:
                 return [self.build_job(ASSET_BASE_JOB_PREFIX)]
-            else:
-                unpartitioned_assets = assets_by_partitions_def.get(None, [])
-                jobs = []
-
-                # sort to ensure some stability in the ordering
+            unpartitioned_assets = assets_by_partitions_def.get(None, [])
+            return [
+                build_assets_job(
+                    f"{ASSET_BASE_JOB_PREFIX}_{i}",
+                    assets=assets_with_partitions + unpartitioned_assets,
+                    source_assets=[*self.source_assets, *self.assets],
+                    resource_defs=self.resource_defs,
+                    executor_def=self.executor_def,
+                )
                 for i, (partitions_def, assets_with_partitions) in enumerate(
-                    sorted(assets_by_partitions_def.items(), key=lambda item: repr(item[0]))
-                ):
-                    if partitions_def is not None:
-                        jobs.append(
-                            build_assets_job(
-                                f"{ASSET_BASE_JOB_PREFIX}_{i}",
-                                assets=assets_with_partitions + unpartitioned_assets,
-                                source_assets=[*self.source_assets, *self.assets],
-                                resource_defs=self.resource_defs,
-                                executor_def=self.executor_def,
-                            )
-                        )
-
-                return jobs
+                    sorted(
+                        assets_by_partitions_def.items(),
+                        key=lambda item: repr(item[0]),
+                    )
+                )
+                if partitions_def is not None
+            ]
 
     def prefixed(self, key_prefix: CoercibleToAssetKeyPrefix):
         """
@@ -526,8 +523,9 @@ def _validate_resource_reqs_for_asset_group(
         required_resource_keys: Set[str] = set()
         for op_def in asset_def.node_def.iterate_solid_defs():
             required_resource_keys.update(set(op_def.required_resource_keys or {}))
-        missing_resource_keys = list(set(required_resource_keys) - present_resource_keys)
-        if missing_resource_keys:
+        if missing_resource_keys := list(
+            set(required_resource_keys) - present_resource_keys
+        ):
             raise DagsterInvalidDefinitionError(
                 f"AssetGroup is missing required resource keys for asset '{asset_def.node_def.name}'. "
                 f"Missing resource keys: {missing_resource_keys}"
@@ -554,8 +552,9 @@ def _validate_resource_reqs_for_asset_group(
 
     for resource_key, resource_def in resource_defs.items():
         resource_keys = set(resource_def.required_resource_keys)
-        missing_resource_keys = sorted(list(set(resource_keys) - present_resource_keys))
-        if missing_resource_keys:
+        if missing_resource_keys := sorted(
+            list(set(resource_keys) - present_resource_keys)
+        ):
             raise DagsterInvalidDefinitionError(
                 "AssetGroup is missing required resource keys for resource '"
                 f"{resource_key}'. Missing resource keys: {missing_resource_keys}"

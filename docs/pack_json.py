@@ -21,15 +21,14 @@ def write_json(filename: str, data: object) -> None:
 
 def extract_route_from_path(path_to_folder: str, root: str, file: str) -> List[str]:
     sub_path = root.replace(path_to_folder, "")[1:]
-    route = sub_path.split("/") + [file.replace(".fjson", "")]
-    return route
+    return sub_path.split("/") + [file.replace(".fjson", "")]
 
 
 def add_data_at_route(root_data, route, data):
     curr = root_data
 
     for part in route[:-1]:
-        if not part in curr:
+        if part not in curr:
             curr[part] = {}
 
         curr = curr[part]

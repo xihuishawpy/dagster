@@ -31,8 +31,7 @@ class HNAPIClient(HNClient):
     def fetch_item_by_id(self, item_id: int) -> Optional[HNItemRecord]:
 
         item_url = f"{HN_BASE_URL}/item/{item_id}.json"
-        item = requests.get(item_url, timeout=5).json()
-        return item
+        return requests.get(item_url, timeout=5).json()
 
     def fetch_max_item_id(self) -> int:
         return requests.get(f"{HN_BASE_URL}/maxitem.json", timeout=5).json()

@@ -9,7 +9,7 @@ def less_simple_data_frame_type_check(_, value):
             description=f"LessSimpleDataFrame should be a list of dicts, got {type(value)}",
         )
 
-    fields = [field for field in value[0].keys()]
+    fields = list(value[0].keys())
 
     for i in range(len(value)):
         row = value[i]
@@ -21,7 +21,7 @@ def less_simple_data_frame_type_check(_, value):
                     f"LessSimpleDataFrame should be a list of dicts, got {type(row)} for row {idx}"
                 ),
             )
-        row_fields = [field for field in row.keys()]
+        row_fields = list(row.keys())
         if fields != row_fields:
             return TypeCheck(
                 success=False,

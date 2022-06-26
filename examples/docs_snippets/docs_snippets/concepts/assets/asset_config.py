@@ -8,8 +8,7 @@ from dagster import asset
 @asset(config_schema={"api_endpoint": str})
 def my_configurable_asset(context):
     api_endpoint = context.op_config["api_endpoint"]
-    data = requests.get(f"{api_endpoint}/data").json()
-    return data
+    return requests.get(f"{api_endpoint}/data").json()
 
 
 # end_example

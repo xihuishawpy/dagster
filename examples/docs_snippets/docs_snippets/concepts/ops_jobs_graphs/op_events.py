@@ -182,8 +182,7 @@ def my_asset_op(context):
         )
     )
 
-    result = do_some_transform(df)
-    return result
+    return do_some_transform(df)
 
 
 # end_asset_op

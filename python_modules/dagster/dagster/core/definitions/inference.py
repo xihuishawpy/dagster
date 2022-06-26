@@ -55,9 +55,11 @@ def _infer_output_description_from_docstring(fn: Callable) -> Optional[str]:
 def infer_output_props(fn: Callable) -> InferredOutputProps:
     signature = funcsigs.signature(fn)
 
-    annotation = None
-    if not inspect.isgeneratorfunction(fn):
-        annotation = _coerce_annotation(signature.return_annotation)
+    annotation = (
+        None
+        if inspect.isgeneratorfunction(fn)
+        else _coerce_annotation(signature.return_annotation)
+    )
 
     return InferredOutputProps(
         annotation=annotation,
@@ -67,13 +69,11 @@ def infer_output_props(fn: Callable) -> InferredOutputProps:
 
 def has_explicit_return_type(fn: Callable) -> bool:
     signature = funcsigs.signature(fn)
-    return not signature.return_annotation is funcsigs.Signature.empty
+    return signature.return_annotation is not funcsigs.Signature.empty
 
 
 def _coerce_annotation(type_annotation: Type) -> Optional[Type]:
-    if type_annotation is not inspect.Parameter.empty:
-        return type_annotation
-    return None
+    return None if type_annotation is inspect.Parameter.empty else type_annotation
 
 
 def _infer_inputs_from_params(
@@ -107,5 +107,4 @@ def infer_input_props(fn: Callable, context_arg_provided: bool) -> List[Inferred
     params = list(signature.parameters.values())
     descriptions = _infer_input_description_from_docstring(fn)
     params_to_infer = params[1:] if context_arg_provided else params
-    defs = _infer_inputs_from_params(params_to_infer, descriptions=descriptions)
-    return defs
+    return _infer_inputs_from_params(params_to_infer, descriptions=descriptions)

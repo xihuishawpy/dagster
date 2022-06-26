@@ -39,7 +39,7 @@ def test_filter_runs_to_should_retry(instance):
 
     run = create_run(instance, status=PipelineRunStatus.STARTED)
 
-    assert list(filter_runs_to_should_retry([run], instance, 2)) == []
+    assert not list(filter_runs_to_should_retry([run], instance, 2))
 
     dagster_event = DagsterEvent(
         event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
@@ -76,28 +76,26 @@ def test_filter_runs_to_should_retry_tags(instance):
 
     run = create_run(instance, status=PipelineRunStatus.STARTED, tags={MAX_RETRIES_TAG: "0"})
 
-    assert list(filter_runs_to_should_retry([run], instance, 2)) == []
+    assert not list(filter_runs_to_should_retry([run], instance, 2))
 
     instance.report_run_failed(run)
 
-    assert (
-        len(
-            list(
-                filter_runs_to_should_retry(
-                    instance.get_runs(filters=RunsFilter(statuses=[PipelineRunStatus.FAILURE])),
-                    instance,
-                    2,
-                )
-            )
+    assert not list(
+        filter_runs_to_should_retry(
+            instance.get_runs(
+                filters=RunsFilter(statuses=[PipelineRunStatus.FAILURE])
+            ),
+            instance,
+            2,
         )
-        == 0
     )
+
 
     instance.wipe()
 
     run = create_run(instance, status=PipelineRunStatus.STARTED, tags={MAX_RETRIES_TAG: "10"})
 
-    assert list(filter_runs_to_should_retry([run], instance, 0)) == []
+    assert not list(filter_runs_to_should_retry([run], instance, 0))
 
     instance.report_run_failed(run)
 
@@ -120,19 +118,18 @@ def test_filter_runs_to_should_retry_tags(instance):
         instance, status=PipelineRunStatus.STARTED, tags={MAX_RETRIES_TAG: "not-an-int"}
     )
 
-    assert list(filter_runs_to_should_retry([run], instance, 0)) == []
+    assert not list(filter_runs_to_should_retry([run], instance, 0))
 
     instance.report_run_failed(run)
 
-    assert (
-        list(
-            filter_runs_to_should_retry(
-                instance.get_runs(filters=RunsFilter(statuses=[PipelineRunStatus.FAILURE])),
-                instance,
-                2,
-            )
+    assert not list(
+        filter_runs_to_should_retry(
+            instance.get_runs(
+                filters=RunsFilter(statuses=[PipelineRunStatus.FAILURE])
+            ),
+            instance,
+            2,
         )
-        == []
     )
 
 

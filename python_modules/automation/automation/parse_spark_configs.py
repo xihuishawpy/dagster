@@ -197,7 +197,7 @@ class SparkConfigNode:
             retdict: Dict[str, Union[SparkConfig, SparkConfigNode]]
             if self.value:
                 retdict = {"root": self.value}
-                retdict.update(self.children)
+                retdict |= self.children
             else:
                 retdict = self.children
 
@@ -210,7 +210,7 @@ class SparkConfigNode:
                     with printer.with_indent():
                         for (k, v) in retdict.items():
                             with printer.with_indent():
-                                printer.append('"{}": '.format(k))
+                                printer.append(f'"{k}": ')
                             v.write(printer)
 
                             printer.line(",")
@@ -230,7 +230,12 @@ def extract(spark_docs_markdown_text: str) -> SparkConfigNode:
         parsed_table = list(ptr.HtmlTableTextLoader(table).load())[0]
         df = parsed_table.as_dataframe()
         for _, row in df.iterrows():
-            s = SparkConfig(row["Property Name"], row["Default"], name + ": " + row["Meaning"])
+            s = SparkConfig(
+                row["Property Name"],
+                row["Default"],
+                f"{name}: " + row["Meaning"],
+            )
+
             spark_configs.append(s)
 
     result = SparkConfigNode()
@@ -273,10 +278,9 @@ def serialize(result: SparkConfigNode) -> bytes:
 @click.command()
 def run() -> None:
     r = requests.get(
-        "https://raw.githubusercontent.com/apache/spark/{}/docs/configuration.md".format(
-            SPARK_VERSION
-        )
+        f"https://raw.githubusercontent.com/apache/spark/{SPARK_VERSION}/docs/configuration.md"
     )
+
 
     result = extract(r.text)
     serialized = serialize(result)

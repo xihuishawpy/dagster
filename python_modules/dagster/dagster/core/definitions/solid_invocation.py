@@ -120,7 +120,7 @@ def _resolve_inputs(
 
     # Fail early if too many inputs were provided.
     if len(input_defs_by_name) < len(args) + len(kwargs):
-        if len(nothing_input_defs) > 0:
+        if nothing_input_defs:
             suggestion = (
                 "This may be because you attempted to provide a value for a nothing "
                 "dependency. Nothing dependencies are ignored when directly invoking solids."
@@ -143,10 +143,11 @@ def _resolve_inputs(
             f"{solid_def.node_type_str} '{solid_def.name}' has {len(positional_inputs)} positional inputs, but {len(args)} positional inputs were provided."
         )
 
-    input_dict = {}
+    input_dict = {
+        positional_inputs[position]: value
+        for position, value in enumerate(args)
+    }
 
-    for position, value in enumerate(args):
-        input_dict[positional_inputs[position]] = value
 
     for positional_input in positional_inputs[len(args) :]:
         input_def = input_defs_by_name[positional_input]
@@ -206,27 +207,29 @@ def _type_check_output_wrapper(
             outputs_seen = set()
 
             async for event in async_gen:
-                if isinstance(
+                if not isinstance(
                     event,
-                    (AssetMaterialization, AssetObservation, Materialization, ExpectationResult),
+                    (
+                        AssetMaterialization,
+                        AssetObservation,
+                        Materialization,
+                        ExpectationResult,
+                    ),
                 ):
-                    yield event
-                else:
                     if not isinstance(event, (Output, DynamicOutput)):
                         raise DagsterInvariantViolationError(
                             f"When yielding outputs from a {solid_def.node_type_str} generator, they should be wrapped in an `Output` object."
                         )
-                    else:
-                        output_def = output_defs[event.output_name]
-                        _type_check_output(output_def, event, context)
-                        if output_def.name in outputs_seen and not isinstance(
-                            output_def, DynamicOutputDefinition
-                        ):
-                            raise DagsterInvariantViolationError(
-                                f"Invocation of {solid_def.node_type_str} '{context.alias}' yielded an output '{output_def.name}' multiple times."
-                            )
-                        outputs_seen.add(output_def.name)
-                    yield event
+                    output_def = output_defs[event.output_name]
+                    _type_check_output(output_def, event, context)
+                    if output_def.name in outputs_seen and not isinstance(
+                        output_def, DynamicOutputDefinition
+                    ):
+                        raise DagsterInvariantViolationError(
+                            f"Invocation of {solid_def.node_type_str} '{context.alias}' yielded an output '{output_def.name}' multiple times."
+                        )
+                    outputs_seen.add(output_def.name)
+                yield event
             for output_def in solid_def.output_defs:
                 if output_def.name not in outputs_seen and output_def.is_required:
                     raise DagsterInvariantViolationError(
@@ -260,16 +263,15 @@ def _type_check_output_wrapper(
                         raise DagsterInvariantViolationError(
                             f"When yielding outputs from a {solid_def.node_type_str} generator, they should be wrapped in an `Output` object."
                         )
-                    else:
-                        output_def = output_defs[event.output_name]
-                        output = _type_check_output(output_def, event, context)
-                        if output_def.name in outputs_seen and not isinstance(
-                            output_def, DynamicOutputDefinition
-                        ):
-                            raise DagsterInvariantViolationError(
-                                f"Invocation of {solid_def.node_type_str} '{context.alias}' yielded an output '{output_def.name}' multiple times."
-                            )
-                        outputs_seen.add(output_def.name)
+                    output_def = output_defs[event.output_name]
+                    output = _type_check_output(output_def, event, context)
+                    if output_def.name in outputs_seen and not isinstance(
+                        output_def, DynamicOutputDefinition
+                    ):
+                        raise DagsterInvariantViolationError(
+                            f"Invocation of {solid_def.node_type_str} '{context.alias}' yielded an output '{output_def.name}' multiple times."
+                        )
+                    outputs_seen.add(output_def.name)
                     yield output
             for output_def in solid_def.output_defs:
                 if output_def.name not in outputs_seen and output_def.is_required:
@@ -333,7 +335,7 @@ def _type_check_function_output(
         received_output = solid_def.output_defs[0].name
 
     for output_def in solid_def.output_defs:
-        if output_def.is_required and not output_def.name == received_output:
+        if output_def.is_required and output_def.name != received_output:
             raise DagsterInvariantViolationError(
                 f"Invocation of {solid_def.node_type_str} '{solid_def.name}' did not return an output for non-optional "
                 f"output '{output_def.name}'."
@@ -356,14 +358,13 @@ def _type_check_output(
 
     op_label = context.describe_op()
 
-    if isinstance(output, list) and all([isinstance(inner, DynamicOutput) for inner in output]):
+    if isinstance(output, list) and all(
+        isinstance(inner, DynamicOutput) for inner in output
+    ):
         dagster_type = output_def.dagster_type
         output_list = cast(List[DynamicOutput], output)
         for dyn_output in output_list:
-            if (
-                not dyn_output.output_name == DEFAULT_OUTPUT
-                and dyn_output.output_name != output_def.name
-            ):
+            if dyn_output.output_name not in [DEFAULT_OUTPUT, output_def.name]:
                 raise DagsterInvariantViolationError(
                     f"Received dynamic output with name '{dyn_output.output_name}' that does not exist."
                 )
@@ -381,7 +382,6 @@ def _type_check_output(
                     dagster_type=dagster_type,
                 )
             context.observe_output(output_def.name, dyn_output.mapping_key)
-        return output
     elif isinstance(output, (Output, DynamicOutput)):
         dagster_type = output_def.dagster_type
         type_check = do_type_check(context.for_type(dagster_type), dagster_type, output.value)
@@ -399,7 +399,6 @@ def _type_check_output(
         context.observe_output(
             output_def.name, output.mapping_key if isinstance(output, DynamicOutput) else None
         )
-        return output
     else:
         dagster_type = output_def.dagster_type
         type_check = do_type_check(context.for_type(dagster_type), dagster_type, output)
@@ -413,4 +412,5 @@ def _type_check_output(
                 metadata_entries=type_check.metadata_entries,
                 dagster_type=dagster_type,
             )
-        return output
+
+    return output

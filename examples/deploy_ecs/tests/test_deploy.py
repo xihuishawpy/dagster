@@ -55,7 +55,7 @@ def source_code(reference_deployment, tmpdir):
     for path in reference_deployment.listdir():
         if not path.basename.startswith("requirements"):
             continue
-        if not path.ext == ".txt":
+        if path.ext != ".txt":
             continue
 
         overrides = []

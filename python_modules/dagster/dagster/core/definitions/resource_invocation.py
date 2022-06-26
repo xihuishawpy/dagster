@@ -37,8 +37,7 @@ def resource_invocation_result(
         @contextmanager
         def _wrap_gen():
             try:
-                val = next(val_or_gen)
-                yield val
+                yield next(val_or_gen)
             except StopIteration:
                 check.failed("Resource generator must yield one item.")
 

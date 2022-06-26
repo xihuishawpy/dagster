@@ -39,12 +39,11 @@ def check():
         query_name: query_name in legacy_query_info.legacy_queries
         for query_name in current_queries_dict
     }
-    missing_query_history_subdirs = [
+    if missing_query_history_subdirs := [
         query_name
         for (query_name, query_present) in query_directories_present.items()
         if not query_present
-    ]
-    if missing_query_history_subdirs:
+    ]:
         raise Exception(
             "Missing some query history (sub)directories:"
             f"\n\t{missing_query_history_subdirs}"
@@ -92,16 +91,21 @@ def snapshot():
             os.mkdir(query_dir)
 
         most_recent_query = None
-        dagster_version_and_date_str_lst = [
-            deserialize_from_query_filename(filename) for filename in os.listdir(query_dir)
-        ]
-        if dagster_version_and_date_str_lst:
+        if dagster_version_and_date_str_lst := [
+            deserialize_from_query_filename(filename)
+            for filename in os.listdir(query_dir)
+        ]:
             last_dagster_version, last_date = max(
-                [
-                    (dagster_version, datetime.strptime(date_str, DATE_FORMAT_STRING))
-                    for (dagster_version, date_str) in dagster_version_and_date_str_lst
-                ]
+                (
+                    dagster_version,
+                    datetime.strptime(date_str, DATE_FORMAT_STRING),
+                )
+                for (
+                    dagster_version,
+                    date_str,
+                ) in dagster_version_and_date_str_lst
             )
+
             most_recent_query_filename = serialize_to_query_filename(
                 last_dagster_version, last_date.strftime(DATE_FORMAT_STRING)
             )
@@ -116,8 +120,10 @@ def snapshot():
             current_query_body, most_recent_query
         ):
             query_filename = serialize_to_query_filename(
-                dagster_graphql.__version__, datetime.today().strftime(DATE_FORMAT_STRING)
+                dagster_graphql.__version__,
+                datetime.now().strftime(DATE_FORMAT_STRING),
             )
+
             query_full_file_path = os.path.join(query_dir, query_filename)
             click.echo(
                 f"Writing the dagster_graphql.client.client_queries.{current_query_name}"

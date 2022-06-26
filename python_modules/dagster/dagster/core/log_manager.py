@@ -54,8 +54,7 @@ class DagsterMessageProps(
         if not event_specific_data:
             return None
 
-        error = getattr(event_specific_data, "error", None)
-        if error:
+        if error := getattr(event_specific_data, "error", None):
             return "\n\n" + getattr(event_specific_data, "error_display_string", error.to_string())
         return None
 
@@ -67,9 +66,7 @@ class DagsterMessageProps(
 
     @property
     def step_key(self) -> Optional[str]:
-        if self.dagster_event is None:
-            return None
-        return self.dagster_event.step_key
+        return None if self.dagster_event is None else self.dagster_event.step_key
 
     @property
     def event_type_value(self) -> Optional[str]:

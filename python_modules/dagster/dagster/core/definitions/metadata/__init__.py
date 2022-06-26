@@ -796,7 +796,7 @@ class TableMetadataValue(
         check.list_param(records, "records", of_type=TableRecord)
         check.opt_inst_param(schema, "schema", TableSchema)
 
-        if len(records) == 0:
+        if not records:
             schema = check.not_none(schema, "schema must be provided if records is empty")
         else:
             columns = set(records[0].data.keys())

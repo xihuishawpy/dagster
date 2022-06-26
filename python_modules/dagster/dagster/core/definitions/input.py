@@ -172,10 +172,7 @@ class InputDefinition:
 
     @property
     def hardcoded_asset_key(self) -> Optional[AssetKey]:
-        if not callable(self._asset_key):
-            return self._asset_key
-        else:
-            return None
+        return None if callable(self._asset_key) else self._asset_key
 
     def get_asset_key(self, context) -> Optional[AssetKey]:
         """Get the AssetKey associated with this InputDefinition for the given
@@ -264,9 +261,11 @@ class InputDefinition:
         if description is None and inferred.description is not None:
             description = inferred.description
 
-        default_value = self._default_value
-        if not self.has_default_value:
-            default_value = inferred.default_value
+        default_value = (
+            self._default_value
+            if self.has_default_value
+            else inferred.default_value
+        )
 
         return InputDefinition(
             name=self.name,

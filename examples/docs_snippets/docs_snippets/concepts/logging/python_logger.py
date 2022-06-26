@@ -12,8 +12,7 @@ def scope_logged_job():
     def ambitious_op():
         my_logger = logging.getLogger("my_logger")
         try:
-            x = 1 / 0
-            return x
+            return 1 / 0
         except ZeroDivisionError:
             my_logger.error("Couldn't divide by zero!")
 
@@ -36,8 +35,7 @@ def scope_logged_job2():
     def ambitious_op():
         my_logger = get_dagster_logger()
         try:
-            x = 1 / 0
-            return x
+            return 1 / 0
         except ZeroDivisionError:
             my_logger.error("Couldn't divide by zero!")
 

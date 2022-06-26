@@ -21,7 +21,7 @@ def less_simple_data_frame_type_check(_, value):
             "{type_}".format(type_=type(value))
         )
 
-    fields = [field for field in value[0].keys()]
+    fields = list(value[0].keys())
 
     for i in range(len(value)):
         row = value[i]
@@ -30,7 +30,7 @@ def less_simple_data_frame_type_check(_, value):
                 "LessSimpleDataFrame should be a list of dicts, "
                 "got {type_} for row {idx}".format(type_=type(row), idx=(i + 1))
             )
-        row_fields = [field for field in row.keys()]
+        row_fields = list(row.keys())
         if fields != row_fields:
             raise Failure(
                 "Rows in LessSimpleDataFrame should have the same fields, "
@@ -45,7 +45,7 @@ def less_simple_data_frame_type_check(_, value):
 def less_simple_data_frame_loader(context, config):
     csv_path = os.path.join(os.path.dirname(__file__), config["csv_path"])
     with open(csv_path, "r", encoding="utf8") as fd:
-        lines = [row for row in csv.DictReader(fd)]
+        lines = list(csv.DictReader(fd))
 
     context.log.info("Read {n_lines} lines".format(n_lines=len(lines)))
     return lines

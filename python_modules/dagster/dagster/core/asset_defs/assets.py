@@ -400,13 +400,12 @@ class AssetsDefinition(ResourceAddable):
             group_names_by_key, "group_names_by_key", key_type=AssetKey, value_type=str
         )
 
-        defined_group_names = [
+        if defined_group_names := [
             asset_key.to_user_string()
             for asset_key in group_names_by_key
             if asset_key in self.group_names_by_key
             and self.group_names_by_key[asset_key] != DEFAULT_GROUP_NAME
-        ]
-        if defined_group_names:
+        ]:
             raise DagsterInvalidDefinitionError(
                 f"Group name already exists on assets {', '.join(defined_group_names)}"
             )
@@ -510,17 +509,18 @@ class AssetsDefinition(ResourceAddable):
     def __str__(self):
         if len(self.asset_keys) == 1:
             return f"AssetsDefinition with key {self.asset_key.to_string()}"
-        else:
-            asset_keys = ", ".join(
-                sorted(list([asset_key.to_string() for asset_key in self.asset_keys]))
-            )
-            return f"AssetsDefinition with keys {asset_keys}"
+        asset_keys = ", ".join(
+            sorted([asset_key.to_string() for asset_key in self.asset_keys])
+        )
+
+        return f"AssetsDefinition with keys {asset_keys}"
 
     def with_resources(self, resource_defs: Mapping[str, ResourceDefinition]) -> "AssetsDefinition":
         from dagster.core.execution.resources_init import get_transitive_required_resource_keys
 
-        overlapping_keys = get_resource_key_conflicts(self.resource_defs, resource_defs)
-        if overlapping_keys:
+        if overlapping_keys := get_resource_key_conflicts(
+            self.resource_defs, resource_defs
+        ):
             overlapping_keys_str = ", ".join(sorted(list(overlapping_keys)))
             raise DagsterInvalidInvocationError(
                 f"{str(self)} has conflicting resource "
@@ -574,14 +574,10 @@ def _infer_keys_by_input_names(
             f"expected keys: {all_input_names}",
         )
 
-    # If asset key is not supplied in keys_by_input_name, create asset key
-    # from input name
-    inferred_input_names_by_asset_key: Dict[str, AssetKey] = {
+    return {
         input_name: keys_by_input_name.get(input_name, AssetKey([input_name]))
         for input_name in all_input_names
     }
-
-    return inferred_input_names_by_asset_key
 
 
 def _infer_keys_by_output_names(
@@ -597,9 +593,10 @@ def _infer_keys_by_output_names(
             f"expected keys: {set(output_names)}",
         )
 
-    inferred_keys_by_output_names: Dict[str, AssetKey] = {
-        output_name: asset_key for output_name, asset_key in keys_by_output_name.items()
-    }
+    inferred_keys_by_output_names: Dict[str, AssetKey] = dict(
+        keys_by_output_name.items()
+    )
+
 
     if (
         len(output_names) == 1

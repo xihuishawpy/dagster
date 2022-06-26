@@ -15,8 +15,9 @@ if TYPE_CHECKING:
 
 def _validate_hook_fn_params(fn, expected_positionals):
     params = get_function_params(fn)
-    missing_positional = validate_expected_params(params, expected_positionals)
-    if missing_positional:
+    if missing_positional := validate_expected_params(
+        params, expected_positionals
+    ):
         raise DagsterInvalidDefinitionError(
             "'{hook_name}' decorated function does not have required positional "
             "parameter '{missing_param}'. Hook functions should only have keyword arguments "

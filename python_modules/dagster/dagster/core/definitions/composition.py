@@ -177,7 +177,7 @@ class InProgressCompositionContext:
         return node_name
 
     def add_pending_invocation(self, solid: "PendingNodeInvocation"):
-        solid_name = solid.given_alias if solid.given_alias else solid.node_def.name
+        solid_name = solid.given_alias or solid.node_def.name
         self._pending_invocations[solid_name] = solid
 
     def complete(self, output: Optional[Dict[str, OutputMapping]]) -> "CompleteCompositionContext":
@@ -308,7 +308,7 @@ class PendingNodeInvocation:
         from ..execution.context.invocation import UnboundSolidExecutionContext
         from .solid_invocation import solid_invocation_result
 
-        node_name = self.given_alias if self.given_alias else self.node_def.name
+        node_name = self.given_alias or self.node_def.name
 
         # If PendingNodeInvocation is not within composition context, and underlying node definition
         # is a solid definition, then permit it to be invoked and executed like a solid definition.
@@ -417,17 +417,17 @@ class PendingNodeInvocation:
                     resolved_node_name, output_name, self.node_def.node_type_str
                 )
 
-        outputs = [output_def for output_def in self.node_def.output_defs]
-        invoked_output_handles = {}
-        for output_def in outputs:
-            if output_def.is_dynamic:
-                invoked_output_handles[output_def.name] = InvokedSolidDynamicOutputWrapper(
-                    resolved_node_name, output_def.name, self.node_def.node_type_str
-                )
-            else:
-                invoked_output_handles[output_def.name] = InvokedSolidOutputHandle(
-                    resolved_node_name, output_def.name, self.node_def.node_type_str
-                )
+        outputs = list(self.node_def.output_defs)
+        invoked_output_handles = {
+            output_def.name: InvokedSolidDynamicOutputWrapper(
+                resolved_node_name, output_def.name, self.node_def.node_type_str
+            )
+            if output_def.is_dynamic
+            else InvokedSolidOutputHandle(
+                resolved_node_name, output_def.name, self.node_def.node_type_str
+            )
+            for output_def in outputs
+        }
 
         return namedtuple(
             "_{node_def}_outputs".format(node_def=self.node_def.name),
@@ -435,7 +435,7 @@ class PendingNodeInvocation:
         )(**invoked_output_handles)
 
     def describe_node(self):
-        node_name = self.given_alias if self.given_alias else self.node_def.name
+        node_name = self.given_alias or self.node_def.name
         return f"{self.node_def.node_type_str} '{node_name}'"
 
     def _process_argument_node(self, node_name, output_node, input_name, input_bindings, arg_desc):
@@ -489,9 +489,7 @@ class PendingNodeInvocation:
                 "output must be unpacked by invoking map or collect."
             )
 
-        elif isinstance(output_node, PendingNodeInvocation) or isinstance(
-            output_node, NodeDefinition
-        ):
+        elif isinstance(output_node, (PendingNodeInvocation, NodeDefinition)):
             raise DagsterInvalidDefinitionError(
                 "In {source} {name}, received an un-invoked {described_node} "
                 " for input "
@@ -593,7 +591,7 @@ class PendingNodeInvocation:
             description=description,
             resource_defs=resource_defs,
             config=config,
-            tags=tags if not self.tags else self.tags.updated_with(tags),
+            tags=self.tags.updated_with(tags) if self.tags else tags,
             logger_defs=logger_defs,
             executor_def=executor_def,
             hooks=job_hooks,
@@ -844,10 +842,7 @@ def composite_mapping_from_output(
 
     # single output
     if isinstance(output, InvokedSolidOutputHandle):
-        if len(output_defs) == 1:
-            defn = output_defs[0]
-            return {defn.name: defn.mapping_from(output.solid_name, output.output_name)}
-        else:
+        if len(output_defs) != 1:
             raise DagsterInvalidDefinitionError(
                 "Returned a single output ({solid_name}.{output_name}) in "
                 "{decorator_name} '{name}' but {num} outputs are defined. "
@@ -860,6 +855,8 @@ def composite_mapping_from_output(
                 )
             )
 
+        defn = output_defs[0]
+        return {defn.name: defn.mapping_from(output.solid_name, output.output_name)}
     output_mapping_dict = {}
     output_def_dict = {output_def.name: output_def for output_def in output_defs}
 
@@ -1042,7 +1039,7 @@ def do_composition(
             mapping for mapping in context.input_mappings if mapping.definition.name == defn.name
         ]
 
-        if len(mappings) == 0:
+        if not mappings:
             if decorator_name in {"@op", "@graph"}:
                 invocation_name = "op/graph"
             else:

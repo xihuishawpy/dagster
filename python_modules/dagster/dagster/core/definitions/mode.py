@@ -87,17 +87,22 @@ class ModeDefinition(
             resource_defs=resource_defs_with_defaults,
             loggers=(
                 check.opt_dict_param(
-                    logger_defs, "logger_defs", key_type=str, value_type=LoggerDefinition
+                    logger_defs,
+                    "logger_defs",
+                    key_type=str,
+                    value_type=LoggerDefinition,
                 )
                 or default_loggers()
             ),
             executor_defs=check.list_param(
-                executor_defs if executor_defs else default_executors,
+                executor_defs or default_executors,
                 "executor_defs",
                 of_type=ExecutorDefinition,
             ),
             description=check.opt_str_param(description, "description"),
-            config_mapping=check.opt_inst_param(_config_mapping, "_config_mapping", ConfigMapping),
+            config_mapping=check.opt_inst_param(
+                _config_mapping, "_config_mapping", ConfigMapping
+            ),
             partitioned_config=check.opt_inst_param(
                 _partitioned_config, "_partitioned_config", PartitionedConfig
             ),

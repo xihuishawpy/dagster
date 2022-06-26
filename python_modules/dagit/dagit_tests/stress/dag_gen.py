@@ -16,7 +16,7 @@ from dagster import _check as check
 def generate_solid(solid_id, num_inputs, num_outputs, num_cfg):
     def compute_fn(_context, **_kwargs):
         for i in range(num_outputs):
-            yield Output(i, "out_{}".format(i))
+            yield Output(i, f"out_{i}")
 
     config = {}
     for i in range(num_cfg):
@@ -47,7 +47,7 @@ def generate_pipeline(name, size, connect_factor=1.0):
         num_inputs = random.randint(1, 3)
         num_outputs = random.randint(1, 3)
         num_cfg = random.randint(0, 5)
-        solid_id = "{}_solid_{}".format(name, i)
+        solid_id = f"{name}_solid_{i}"
         solids[solid_id] = generate_solid(
             solid_id=solid_id,
             num_inputs=num_inputs,
@@ -58,7 +58,7 @@ def generate_pipeline(name, size, connect_factor=1.0):
     solid_ids = list(solids.keys())
     # connections
     deps = defaultdict(dict)
-    for i in range(int(size * connect_factor)):
+    for _ in range(int(size * connect_factor)):
         # choose output
         out_idx = random.randint(0, len(solid_ids) - 2)
         out_solid_id = solid_ids[out_idx]

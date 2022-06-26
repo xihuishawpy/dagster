@@ -82,19 +82,19 @@ def get_friendly_path_info(stack: EvaluationStack) -> Tuple[str, str]:
         comps = ["root"]
         for entry in stack.entries:
             if isinstance(entry, EvaluationStackPathEntry):
-                comp = ":" + entry.field_name
+                comp = f":{entry.field_name}"
                 comps.append(comp)
             elif isinstance(entry, EvaluationStackListItemEntry):
                 comps.append("[{i}]".format(i=entry.list_index))
             elif isinstance(entry, EvaluationStackMapKeyEntry):
-                comp = ":" + repr(entry.map_key) + ":key"
+                comp = f":{repr(entry.map_key)}:key"
                 comps.append(comp)
             elif isinstance(entry, EvaluationStackMapValueEntry):
-                comp = ":" + repr(entry.map_key) + ":value"
+                comp = f":{repr(entry.map_key)}:value"
                 comps.append(comp)
             else:
                 check.failed("unsupported")
 
         path = "".join(comps)
-        path_msg = "at path " + path
+        path_msg = f"at path {path}"
     return path_msg, path

@@ -39,11 +39,11 @@ WORKSPACE_TARGET_WARNING = "Can only use ONE of --workspace/-w, --python-file/-f
 
 
 def _cli_load_invariant(condition: object, msg=None) -> None:
-    msg = (
-        msg
-        or "Invalid set of CLI arguments for loading repository/pipeline. See --help for details."
-    )
     if not condition:
+        msg = (
+            msg
+            or "Invalid set of CLI arguments for loading repository/pipeline. See --help for details."
+        )
         raise UsageError(msg)
 
 
@@ -53,11 +53,7 @@ def _check_cli_arguments_none(kwargs: Dict[str, str], *keys: str) -> None:
 
 
 def are_all_keys_empty(kwargs: Dict[str, str], keys: Iterable[str]) -> bool:
-    for key in keys:
-        if kwargs.get(key):
-            return False
-
-    return True
+    return not any(kwargs.get(key) for key in keys)
 
 
 WORKSPACE_CLI_ARGS = (
@@ -465,7 +461,7 @@ def get_pipeline_or_job_python_origin_from_kwargs(kwargs, using_job_op_graph_api
                 pipelines=_sorted_quoted(pipeline_or_job_names),
             )
         )
-    elif not provided_pipeline_name in pipeline_or_job_names:
+    elif provided_pipeline_name not in pipeline_or_job_names:
         raise click.UsageError(
             (
                 'Pipeline/Job "{provided_pipeline_name}" not found in repository "{repository_name}". '
@@ -560,15 +556,13 @@ def get_repository_python_origin_from_kwargs(kwargs: Dict[str, str]) -> Reposito
                 kwargs["attribute"],
                 get_working_directory_from_kwargs(kwargs),
             )
-        elif kwargs.get("package_name"):
+        else:
             _check_cli_arguments_none(kwargs, "python_file", "module_name")
             code_pointer = CodePointer.from_python_package(
                 kwargs["package_name"],
                 kwargs["attribute"],
                 get_working_directory_from_kwargs(kwargs),
             )
-        else:
-            check.failed("Must specify a Python file or module name")
         return RepositoryPythonOrigin(
             executable_path=sys.executable,
             code_pointer=code_pointer,
@@ -586,7 +580,7 @@ def get_repository_python_origin_from_kwargs(kwargs: Dict[str, str]) -> Reposito
                 f"Options are: {found_repo_names}."
             )
         )
-    elif not provided_repo_name in code_pointer_dict:
+    elif provided_repo_name not in code_pointer_dict:
         raise click.UsageError(
             f'Repository "{provided_repo_name}" not found. Found {found_repo_names} instead.'
         )
@@ -616,13 +610,11 @@ def get_repository_location_from_workspace(
             provided_location_name = workspace.repository_location_names[0]
         elif len(workspace.repository_location_names) == 0:
             raise click.UsageError("No locations found in workspace")
-        elif provided_location_name is None:
+        else:
             raise click.UsageError(
-                (
-                    "Must provide --location as there are multiple locations "
-                    "available. Options are: {}"
-                ).format(_sorted_quoted(workspace.repository_location_names))
+                f"Must provide --location as there are multiple locations available. Options are: {_sorted_quoted(workspace.repository_location_names)}"
             )
+
 
     if provided_location_name not in workspace.repository_location_names:
         raise click.UsageError(
@@ -725,7 +717,7 @@ def get_external_pipeline_or_job_from_external_repo(
             )
         )
 
-    if not provided_pipeline_or_job_name in external_pipelines:
+    if provided_pipeline_or_job_name not in external_pipelines:
         raise click.UsageError(
             (
                 '{pipeline_or_job} "{provided_pipeline_name}" not found in repository "{repository_name}". '
@@ -755,4 +747,4 @@ def get_external_pipeline_or_job_from_kwargs(
 
 
 def _sorted_quoted(strings):
-    return "[" + ", ".join(["'{}'".format(s) for s in sorted(list(strings))]) + "]"
+    return "[" + ", ".join([f"'{s}'" for s in sorted(list(strings))]) + "]"

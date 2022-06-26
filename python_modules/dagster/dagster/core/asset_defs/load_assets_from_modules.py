@@ -45,7 +45,7 @@ def assets_and_source_assets_from_modules(
             A tuple containing a list of assets and a list of source assets defined in the given modules.
     """
     asset_ids: Set[int] = set()
-    asset_keys: Dict[AssetKey, ModuleType] = dict()
+    asset_keys: Dict[AssetKey, ModuleType] = {}
     source_assets: List[SourceAsset] = list(
         check.opt_sequence_param(extra_source_assets, "extra_source_assets", of_type=SourceAsset)
     )
@@ -57,7 +57,7 @@ def assets_and_source_assets_from_modules(
                 keys = asset.keys if isinstance(asset, AssetsDefinition) else [asset.key]
                 for key in keys:
                     if key in asset_keys:
-                        modules_str = ", ".join(set([asset_keys[key].__name__, module.__name__]))
+                        modules_str = ", ".join({asset_keys[key].__name__, module.__name__})
                         raise DagsterInvalidDefinitionError(
                             f"Asset key {key} is defined multiple times. Definitions found in modules: {modules_str}."
                         )
@@ -235,18 +235,16 @@ def load_assets_from_package_name(
 
 def _find_modules_in_package(package_module: ModuleType) -> Iterable[ModuleType]:
     yield package_module
-    package_path = package_module.__file__
-    if package_path:
-        for _, modname, is_pkg in pkgutil.walk_packages([os.path.dirname(package_path)]):
-            submodule = import_module(f"{package_module.__name__}.{modname}")
-            if is_pkg:
-                yield from _find_modules_in_package(submodule)
-            else:
-                yield submodule
-    else:
+    if not (package_path := package_module.__file__):
         raise ValueError(
             f"Tried to find modules in package {package_module}, but its __file__ is None"
         )
+    for _, modname, is_pkg in pkgutil.walk_packages([os.path.dirname(package_path)]):
+        submodule = import_module(f"{package_module.__name__}.{modname}")
+        if is_pkg:
+            yield from _find_modules_in_package(submodule)
+        else:
+            yield submodule
 
 
 def prefix_assets(
@@ -299,12 +297,11 @@ def prefix_assets(
         output_asset_key_replacements = {
             asset_key: AssetKey(key_prefix + asset_key.path) for asset_key in assets_def.keys
         }
-        input_asset_key_replacements = {}
-        for dep_asset_key in assets_def.dependency_keys:
-            if dep_asset_key in asset_keys:
-                input_asset_key_replacements[dep_asset_key] = AssetKey(
-                    key_prefix + dep_asset_key.path
-                )
+        input_asset_key_replacements = {
+            dep_asset_key: AssetKey(key_prefix + dep_asset_key.path)
+            for dep_asset_key in assets_def.dependency_keys
+            if dep_asset_key in asset_keys
+        }
 
         result_assets.append(
             assets_def.with_prefix_or_group(

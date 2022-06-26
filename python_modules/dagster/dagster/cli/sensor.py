@@ -275,10 +275,10 @@ def execute_preview_command(
 ):
     with DagsterInstance.get() as instance:
         with get_repository_location_from_kwargs(
-            instance,
-            version=dagster_version,
-            kwargs=cli_args,
-        ) as repo_location:
+                    instance,
+                    version=dagster_version,
+                    kwargs=cli_args,
+                ) as repo_location:
             try:
                 external_repo = get_external_repository_from_repo_location(
                     repo_location, cli_args.get("repository")
@@ -304,21 +304,7 @@ def execute_preview_command(
                     )
                     return
 
-                if not sensor_runtime_data.run_requests:
-                    if sensor_runtime_data.skip_message:
-                        print_fn(
-                            "Sensor returned false for {sensor_name}, skipping: {skip_message}".format(
-                                sensor_name=external_sensor.name,
-                                skip_message=sensor_runtime_data.skip_message,
-                            )
-                        )
-                    else:
-                        print_fn(
-                            "Sensor returned false for {sensor_name}, skipping".format(
-                                sensor_name=external_sensor.name
-                            )
-                        )
-                else:
+                if sensor_runtime_data.run_requests:
                     print_fn(
                         "Sensor returning run requests for {num} run(s):\n\n{run_requests}".format(
                             num=len(sensor_runtime_data.run_requests),
@@ -329,6 +315,19 @@ def execute_preview_command(
                         )
                     )
 
+                elif sensor_runtime_data.skip_message:
+                    print_fn(
+                        "Sensor returned false for {sensor_name}, skipping: {skip_message}".format(
+                            sensor_name=external_sensor.name,
+                            skip_message=sensor_runtime_data.skip_message,
+                        )
+                    )
+                else:
+                    print_fn(
+                        "Sensor returned false for {sensor_name}, skipping".format(
+                            sensor_name=external_sensor.name
+                        )
+                    )
             except DagsterInvariantViolationError as ex:
                 raise click.UsageError(ex)
 
@@ -352,8 +351,8 @@ def sensor_cursor_command(sensor_name, **kwargs):
 def execute_cursor_command(sensor_name, cli_args, print_fn):
     with DagsterInstance.get() as instance:
         with get_repository_location_from_kwargs(
-            instance, version=dagster_version, kwargs=cli_args
-        ) as repo_location:
+                    instance, version=dagster_version, kwargs=cli_args
+                ) as repo_location:
             if bool(cli_args.get("delete")) == bool(cli_args.get("set")):
                 # must use one of delete/set
                 raise click.UsageError("Must set cursor using `--set <value>` or use `--delete`")
@@ -365,21 +364,10 @@ def execute_cursor_command(sensor_name, cli_args, print_fn):
             )
             check_repo_and_scheduler(external_repo, instance)
             external_sensor = external_repo.get_external_sensor(sensor_name)
-            job_state = instance.get_instigator_state(
-                external_sensor.get_external_origin_id(), external_sensor.selector_id
-            )
-            if not job_state:
-                instance.add_instigator_state(
-                    InstigatorState(
-                        external_sensor.get_external_origin(),
-                        InstigatorType.SENSOR,
-                        InstigatorStatus.STOPPED,
-                        SensorInstigatorData(
-                            min_interval=external_sensor.min_interval_seconds, cursor=cursor_value
-                        ),
-                    )
-                )
-            else:
+            if job_state := instance.get_instigator_state(
+                external_sensor.get_external_origin_id(),
+                external_sensor.selector_id,
+            ):
                 instance.update_instigator_state(
                     job_state.with_data(
                         SensorInstigatorData(
@@ -387,6 +375,17 @@ def execute_cursor_command(sensor_name, cli_args, print_fn):
                             last_run_key=job_state.instigator_data.last_run_key,
                             min_interval=external_sensor.min_interval_seconds,
                             cursor=cursor_value,
+                        ),
+                    )
+                )
+            else:
+                instance.add_instigator_state(
+                    InstigatorState(
+                        external_sensor.get_external_origin(),
+                        InstigatorType.SENSOR,
+                        InstigatorStatus.STOPPED,
+                        SensorInstigatorData(
+                            min_interval=external_sensor.min_interval_seconds, cursor=cursor_value
                         ),
                     )
                 )

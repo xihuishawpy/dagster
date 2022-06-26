@@ -11,7 +11,10 @@ def test_pipeline(pg_hostname, postgres):  # pylint: disable=unused-argument
     reconstructable_pipeline = ReconstructablePipeline.for_module(
         "dbt_example", "dbt_example_pipeline"
     )
-    assert set([solid.name for solid in reconstructable_pipeline.get_definition().solids]) == {
+    assert {
+        solid.name
+        for solid in reconstructable_pipeline.get_definition().solids
+    } == {
         "download_file",
         "load_cereals_from_csv",
         "run_cereals_models",
@@ -19,6 +22,7 @@ def test_pipeline(pg_hostname, postgres):  # pylint: disable=unused-argument
         "analyze_cereals",
         "post_plot_to_slack",
     }
+
     with instance_for_test() as instance:
         with tempfile.TemporaryDirectory() as temp_dir:
             res = execute_pipeline(

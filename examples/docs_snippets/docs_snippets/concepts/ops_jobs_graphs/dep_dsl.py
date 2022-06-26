@@ -27,11 +27,14 @@ def construct_graph_with_yaml(yaml_file, op_defs) -> GraphDefinition:
     for op_yaml_data in yaml_data["ops"]:
         def_name = op_yaml_data["def"]
         alias = op_yaml_data.get("alias", def_name)
-        op_deps_entry = {}
-        for input_name, input_data in op_yaml_data.get("deps", {}).items():
-            op_deps_entry[input_name] = DependencyDefinition(
-                solid=input_data["op"], output=input_data.get("output", "result")
+        op_deps_entry = {
+            input_name: DependencyDefinition(
+                solid=input_data["op"],
+                output=input_data.get("output", "result"),
             )
+            for input_name, input_data in op_yaml_data.get("deps", {}).items()
+        }
+
         deps[NodeInvocation(name=def_name, alias=alias)] = op_deps_entry
 
     return GraphDefinition(

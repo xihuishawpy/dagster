@@ -68,7 +68,7 @@ class PartitionedParquetIOManager(IOManager):
         return AssetKey([*self._base_path.split("://"), context.name])
 
     def get_output_asset_partitions(self, context: OutputContext):
-        return set([context.resources.partition_bounds["start"]])
+        return {context.resources.partition_bounds["start"]}
 
 
 @io_manager(

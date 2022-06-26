@@ -377,10 +377,14 @@ class GraphDefinition(NodeDefinition):
     ) -> Optional[InputMapping]:
         check.inst_param(pointer, "pointer", (InputPointer, FanInInputPointer))
 
-        for mapping in self._input_mappings:
-            if mapping.maps_to == pointer:
-                return mapping
-        return None
+        return next(
+            (
+                mapping
+                for mapping in self._input_mappings
+                if mapping.maps_to == pointer
+            ),
+            None,
+        )
 
     def get_output_mapping(self, output_name: str) -> OutputMapping:
         check.str_param(output_name, "output_name")
@@ -599,7 +603,7 @@ class GraphDefinition(NodeDefinition):
                 check.failed(
                     "Can't supply a ConfigMapping or PartitionedConfig for 'config' when 'partitions_def' is supplied."
                 )
-            hardcoded_config = config if config else {}
+            hardcoded_config = config or {}
             partitioned_config = PartitionedConfig(partitions_def, lambda _: hardcoded_config)
 
         if isinstance(config, ConfigMapping):
@@ -900,7 +904,7 @@ def _validate_in_mappings(
                 )
             mapping_keys.add(f"{maps_to.solid_name}.{maps_to.input_name}.{maps_to.fan_in_index}")
             target_type = target_input.dagster_type.get_inner_type_for_fan_in()
-            fan_in_msg = " (index {} of fan-in)".format(maps_to.fan_in_index)
+            fan_in_msg = f" (index {maps_to.fan_in_index} of fan-in)"
         else:
             if dependency_structure.has_deps(solid_input_handle):
                 raise DagsterInvalidDefinitionError(

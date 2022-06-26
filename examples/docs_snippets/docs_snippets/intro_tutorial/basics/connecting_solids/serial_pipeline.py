@@ -9,7 +9,7 @@ from dagster import get_dagster_logger, job, op
 def download_cereals():
     response = requests.get("https://docs.dagster.io/assets/cereal.csv")
     lines = response.text.split("\n")
-    return [row for row in csv.DictReader(lines)]
+    return list(csv.DictReader(lines))
 
 
 @op

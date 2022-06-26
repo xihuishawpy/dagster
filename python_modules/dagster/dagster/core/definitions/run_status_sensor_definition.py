@@ -56,7 +56,7 @@ class RunStatusSensorCursor(
         try:
             obj = deserialize_json_to_dagster_namedtuple(json_str)
             return isinstance(obj, RunStatusSensorCursor)
-        except (JSONDecodeError, DeserializationError):
+        except DeserializationError:
             return False
 
     def to_json(self) -> str:
@@ -533,15 +533,15 @@ class RunStatusSensorDefinition(SensorDefinition):
 
             if args:
                 context = check.opt_inst_param(args[0], context_param_name, RunStatusSensorContext)
-            else:
-                if context_param_name not in kwargs:
-                    raise DagsterInvalidInvocationError(
-                        f"Run status sensor invocation expected argument '{context_param_name}'."
-                    )
+            elif context_param_name in kwargs:
                 context = check.opt_inst_param(
                     kwargs[context_param_name], context_param_name, RunStatusSensorContext
                 )
 
+            else:
+                raise DagsterInvalidInvocationError(
+                    f"Run status sensor invocation expected argument '{context_param_name}'."
+                )
             if not context:
                 raise DagsterInvalidInvocationError(
                     "Context must be provided for direct invocation of run status sensor."

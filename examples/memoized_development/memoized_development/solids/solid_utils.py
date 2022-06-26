@@ -6,5 +6,4 @@ def get_hash_for_file(path):
     with open(path, "rb") as f:
         data = f.read()
     h.update(data)
-    digest = h.hexdigest()
-    return digest
+    return h.hexdigest()

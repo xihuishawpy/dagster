@@ -115,8 +115,9 @@ def instance_for_test(overrides=None, set_dagster_home=True, temp_dir=None):
                 },
                 "telemetry": {"enabled": False},
             },
-            (overrides if overrides else {}),
+            overrides or {},
         )
+
 
         if set_dagster_home:
             stack.enter_context(
@@ -227,7 +228,7 @@ def wait_for_runs_to_finish(instance, timeout=20, run_tags=None):
 
     while True:
         runs = instance.get_runs(filters)
-        if all([run.is_finished for run in runs]):
+        if all(run.is_finished for run in runs):
             return
 
         if total_time > timeout:
@@ -249,14 +250,12 @@ def poll_for_finished_run(instance, run_id=None, timeout=20, run_tags=None):
     )
 
     while True:
-        runs = instance.get_runs(filters, limit=1)
-        if runs:
+        if runs := instance.get_runs(filters, limit=1):
             return runs[0]
-        else:
-            time.sleep(interval)
-            total_time += interval
-            if total_time > timeout:
-                raise Exception("Timed out")
+        time.sleep(interval)
+        total_time += interval
+        if total_time > timeout:
+            raise Exception("Timed out")
 
 
 def poll_for_step_start(instance, run_id, timeout=30):
@@ -270,13 +269,12 @@ def poll_for_event(instance, run_id, event_type, message, timeout=30):
     while True:
         time.sleep(backoff)
         logs = instance.all_logs(run_id)
-        matching_events = [
+        if matching_events := [
             log_record.dagster_event
             for log_record in logs
             if log_record.is_dagster_event
             and log_record.dagster_event.event_type_value == event_type
-        ]
-        if matching_events:
+        ]:
             if message is None:
                 return
             for matching_message in (event.message for event in matching_events):
@@ -411,9 +409,7 @@ class MockedRunCoordinator(RunCoordinator, ConfigurableClass):
 
 
 def get_terminate_signal():
-    if sys.platform == "win32":
-        return signal.SIGTERM
-    return signal.SIGKILL
+    return signal.SIGTERM if sys.platform == "win32" else signal.SIGKILL
 
 
 def get_crash_signals():

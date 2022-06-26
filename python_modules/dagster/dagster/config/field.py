@@ -67,7 +67,7 @@ def resolve_to_config_type(dagster_type: object) -> Union[ConfigType, bool]:
                         )
                     )
 
-                if not key_type.kind == ConfigTypeKind.SCALAR:
+                if key_type.kind != ConfigTypeKind.SCALAR:
                     raise DagsterInvalidDefinitionError(
                         "Non-scalar key in map specification: {key} in map {collection}".format(
                             key=repr(key), collection=dagster_type
@@ -141,18 +141,21 @@ def resolve_to_config_type(dagster_type: object) -> Union[ConfigType, bool]:
 
     if dagster_type is List or isinstance(dagster_type, ListType):
         raise DagsterInvalidDefinitionError(
-            "Cannot use List in the context of config. " + helpful_list_error_string()
+            f"Cannot use List in the context of config. {helpful_list_error_string()}"
         )
+
 
     if dagster_type is Set or isinstance(dagster_type, _TypedPythonSet):
         raise DagsterInvalidDefinitionError(
-            "Cannot use Set in the context of a config field. " + helpful_list_error_string()
+            f"Cannot use Set in the context of a config field. {helpful_list_error_string()}"
         )
+
 
     if dagster_type is Tuple or isinstance(dagster_type, _TypedPythonTuple):
         raise DagsterInvalidDefinitionError(
-            "Cannot use Tuple in the context of a config field. " + helpful_list_error_string()
+            f"Cannot use Tuple in the context of a config field. {helpful_list_error_string()}"
         )
+
 
     if isinstance(dagster_type, DagsterType):
         raise DagsterInvalidDefinitionError(

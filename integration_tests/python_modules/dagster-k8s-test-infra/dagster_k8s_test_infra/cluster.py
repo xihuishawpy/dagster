@@ -82,14 +82,13 @@ def define_cluster_provider_fixture(additional_kind_images=None):
                     )
                 yield cluster_config
 
-        # Use cluster from kubeconfig
         elif provider == "kubeconfig":
             kubeconfig_file = os.getenv("KUBECONFIG", os.path.expandvars("${HOME}/.kube/config"))
             kubernetes.config.load_kube_config(config_file=kubeconfig_file)
             yield ClusterConfig(name="from_system_kubeconfig", kubeconfig_file=kubeconfig_file)
 
         else:
-            raise Exception("unknown cluster provider %s" % provider)
+            raise Exception(f"unknown cluster provider {provider}")
 
     return _cluster_provider
 

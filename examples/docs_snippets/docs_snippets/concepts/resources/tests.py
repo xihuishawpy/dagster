@@ -16,10 +16,9 @@ from dagster import op
 
 @op
 def get_data_without_resource(context):
-    dummy_data = [1, 2, 3]
     # Do not call external apis in tests
     # return call_api()
-    return dummy_data
+    return [1, 2, 3]
 
 
 # end_test_before_marker
@@ -35,8 +34,7 @@ def get_data(context):
 
 @op
 def do_something(context, data):
-    output = process(data)
-    return output
+    return process(data)
 
 
 @graph

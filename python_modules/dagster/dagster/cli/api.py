@@ -96,14 +96,16 @@ def _execute_run_command_body(
 
     pipeline_run: PipelineRun = check.not_none(
         instance.get_run_by_id(pipeline_run_id),
-        "Pipeline run with id '{}' not found for run execution.".format(pipeline_run_id),
+        f"Pipeline run with id '{pipeline_run_id}' not found for run execution.",
     )
+
 
     check.inst(
         pipeline_run.pipeline_code_origin,
         PipelinePythonOrigin,
-        "Pipeline run with id '{}' does not include an origin.".format(pipeline_run_id),
+        f"Pipeline run with id '{pipeline_run_id}' does not include an origin.",
     )
+
 
     recon_pipeline = recon_pipeline_from_origin(
         cast(PipelinePythonOrigin, pipeline_run.pipeline_code_origin)
@@ -199,13 +201,15 @@ def _resume_run_command_body(
     check.inst(
         pipeline_run,
         PipelineRun,
-        "Pipeline run with id '{}' not found for run execution.".format(pipeline_run_id),
+        f"Pipeline run with id '{pipeline_run_id}' not found for run execution.",
     )
+
     check.inst(
         pipeline_run.pipeline_code_origin,
         PipelinePythonOrigin,
-        "Pipeline run with id '{}' does not include an origin.".format(pipeline_run_id),
+        f"Pipeline run with id '{pipeline_run_id}' does not include an origin.",
     )
+
 
     recon_pipeline = recon_pipeline_from_origin(
         cast(PipelinePythonOrigin, pipeline_run.pipeline_code_origin)
@@ -255,8 +259,7 @@ def _resume_run_command_body(
 def get_step_stats_by_key(instance, pipeline_run, step_keys_to_execute):
     # When using the k8s executor, there whould only ever be one step key
     step_stats = instance.get_run_step_stats(pipeline_run.run_id, step_keys=step_keys_to_execute)
-    step_stats_by_key = {step_stat.step_key: step_stat for step_stat in step_stats}
-    return step_stats_by_key
+    return {step_stat.step_key: step_stat for step_stat in step_stats}
 
 
 def verify_step(instance, pipeline_run, retry_state, step_keys_to_execute):
@@ -297,7 +300,7 @@ def verify_step(instance, pipeline_run, retry_state, step_keys_to_execute):
                     pipeline_run,
                 )
                 return False
-        elif current_attempt > 1 and not step_stat_for_key:
+        elif current_attempt > 1:
             instance.report_engine_event(
                 "Attempting to retry attempt {current_attempt} for step {step_key} "
                 "but there is no record of the original attempt".format(
@@ -324,20 +327,21 @@ def execute_step_command(input_json):
         args = deserialize_as(input_json, ExecuteStepArgs)
 
         with (
-            DagsterInstance.from_ref(args.instance_ref)
-            if args.instance_ref
-            else DagsterInstance.get()
-        ) as instance:
+                    DagsterInstance.from_ref(args.instance_ref)
+                    if args.instance_ref
+                    else DagsterInstance.get()
+                ) as instance:
             pipeline_run = instance.get_run_by_id(args.pipeline_run_id)
 
-            buff = []
+            buff = [
+                serialize_dagster_namedtuple(event)
+                for event in _execute_step_command_body(
+                    args,
+                    instance,
+                    pipeline_run,
+                )
+            ]
 
-            for event in _execute_step_command_body(
-                args,
-                instance,
-                pipeline_run,
-            ):
-                buff.append(serialize_dagster_namedtuple(event))
 
             for line in buff:
                 click.echo(line)
@@ -355,13 +359,15 @@ def _execute_step_command_body(
         check.inst(
             pipeline_run,
             PipelineRun,
-            "Pipeline run with id '{}' not found for step execution".format(args.pipeline_run_id),
+            f"Pipeline run with id '{args.pipeline_run_id}' not found for step execution",
         )
+
         check.inst(
             pipeline_run.pipeline_code_origin,
             PipelinePythonOrigin,
-            "Pipeline run with id '{}' does not include an origin.".format(args.pipeline_run_id),
+            f"Pipeline run with id '{args.pipeline_run_id}' does not include an origin.",
         )
+
 
         log_manager = create_context_free_log_manager(instance, pipeline_run)
 
@@ -572,7 +578,7 @@ def grpc_command(
         raise click.UsageError(
             "You must pass a valid --port/-p on Windows: --socket/-s not supported."
         )
-    if not (port or socket and not (port and socket)):
+    if not port and not socket:
         raise click.UsageError("You must pass one and only one of --port/-p or --socket/-s.")
 
     configure_loggers(log_level=coerce_valid_log_level(log_level))
@@ -686,7 +692,7 @@ def grpc_health_check_command(port=None, socket=None, host="localhost", use_ssl=
         raise click.UsageError(
             "You must pass a valid --port/-p on Windows: --socket/-s not supported."
         )
-    if not (port or socket and not (port and socket)):
+    if not port and not socket:
         raise click.UsageError("You must pass one and only one of --port/-p or --socket/-s.")
 
     client = DagsterGrpcClient(port=port, socket=socket, host=host, use_ssl=use_ssl)

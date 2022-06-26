@@ -9,14 +9,12 @@ raw_users = SourceAsset(key="raw_users", io_manager_key="warehouse")
 
 @asset(io_manager_key="warehouse")
 def users(raw_users: DataFrame) -> DataFrame:
-    users_df = raw_users.dropna()
-    return users_df
+    return raw_users.dropna()
 
 
 @asset(io_manager_key="object_store")
 def user_recommender_model(users: DataFrame):
-    users_recommender_model = train_recommender_model(users)
-    return users_recommender_model
+    return train_recommender_model(users)
 
 
 @repository

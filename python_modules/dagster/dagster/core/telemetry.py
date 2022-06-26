@@ -103,20 +103,22 @@ def _telemetry_wrapper(f, metadata=None):
         start_time = datetime.datetime.now()
         log_action(
             instance=instance,
-            action=f.__name__ + "_started",
+            action=f"{f.__name__}_started",
             client_time=start_time,
             metadata=metadata,
         )
+
         result = f(*args, **kwargs)
         end_time = datetime.datetime.now()
         success_metadata = {"success": getattr(result, "success", None)}
         log_action(
             instance=instance,
-            action=f.__name__ + "_ended",
+            action=f"{f.__name__}_ended",
             client_time=end_time,
             elapsed_time=end_time - start_time,
             metadata=merge_dicts(success_metadata, metadata),
         )
+
         return result
 
     return wrap
@@ -124,7 +126,7 @@ def _telemetry_wrapper(f, metadata=None):
 
 def get_python_version():
     version = sys.version_info
-    return "{}.{}.{}".format(version.major, version.minor, version.micro)
+    return f"{version.major}.{version.minor}.{version.micro}"
 
 
 class TelemetryEntry(
@@ -247,7 +249,7 @@ def get_log_queue_dir():
     if dagster_home_path is None:
         dagster_home_path = os.path.expanduser(DAGSTER_HOME_FALLBACK)
 
-    dagster_home_logs_queue_path = dagster_home_path + "/.logs_queue/"
+    dagster_home_logs_queue_path = f"{dagster_home_path}/.logs_queue/"
     if not os.path.exists(dagster_home_logs_queue_path):
         os.makedirs(dagster_home_logs_queue_path)
 
@@ -262,16 +264,15 @@ def _check_telemetry_instance_param(args, kwargs, instance_index):
             DagsterInstance,
             "'instance' parameter passed as keyword argument must be a DagsterInstance",
         )
-    else:
-        check.invariant(len(args) > instance_index)
-        return check.inst_param(
-            args[instance_index],
-            "instance",
-            DagsterInstance,
-            "'instance' argument at position {position} must be a DagsterInstance".format(
-                position=instance_index
-            ),
-        )
+    check.invariant(len(args) > instance_index)
+    return check.inst_param(
+        args[instance_index],
+        "instance",
+        DagsterInstance,
+        "'instance' argument at position {position} must be a DagsterInstance".format(
+            position=instance_index
+        ),
+    )
 
 
 def _get_telemetry_logger():
@@ -324,10 +325,7 @@ def _get_instance_telemetry_info(instance):
 
     check.inst_param(instance, "instance", DagsterInstance)
     dagster_telemetry_enabled = _get_instance_telemetry_enabled(instance)
-    instance_id = None
-    if dagster_telemetry_enabled:
-        instance_id = get_or_set_instance_id()
-
+    instance_id = get_or_set_instance_id() if dagster_telemetry_enabled else None
     run_storage_id = None
     if isinstance(instance.run_storage, SqlRunStorage):
         run_storage_id = instance.run_storage.get_run_storage_id()
@@ -340,7 +338,7 @@ def _get_instance_telemetry_enabled(instance):
 
 def get_or_set_instance_id():
     instance_id = _get_telemetry_instance_id()
-    if instance_id == None:
+    if instance_id is None:
         instance_id = _set_telemetry_instance_id()
     return instance_id
 

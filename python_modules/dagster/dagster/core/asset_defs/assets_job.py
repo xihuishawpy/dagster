@@ -141,7 +141,7 @@ def build_job_partitions_from_assets(
 ) -> Optional[PartitionsDefinition]:
     assets_with_partitions_defs = [assets_def for assets_def in assets if assets_def.partitions_def]
 
-    if len(assets_with_partitions_defs) == 0:
+    if not assets_with_partitions_defs:
         return None
 
     first_assets_with_partitions_def: AssetsDefinition = assets_with_partitions_defs[0]
@@ -166,7 +166,7 @@ def build_node_deps(
     Mapping[NodeHandle, AssetsDefinition],
 ]:
     # sort so that nodes get a consistent name
-    assets_defs = sorted(assets_defs, key=lambda ad: (sorted((ak for ak in ad.keys))))
+    assets_defs = sorted(assets_defs, key=lambda ad: sorted(iter(ad.keys)))
 
     # if the same graph/op is used in multiple assets_definitions, their invocations must have
     # different names. we keep track of definitions that share a name and add a suffix to their

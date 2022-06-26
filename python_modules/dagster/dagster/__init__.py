@@ -379,7 +379,7 @@ def __getattr__(name: str) -> typing.Any:
         rename_warning(value.__name__, name, breaking_version, stacklevel=stacklevel)
         return value
     else:
-        raise AttributeError("module '{}' has no attribute '{}'".format(__name__, name))
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 def __dir__() -> typing.List[str]:
